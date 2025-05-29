@@ -9,7 +9,9 @@ export default function SetupPage() {
   const isOpen = useStoreModal((state) => state.isOpen);
 
   useEffect(() => {
+    console.log("SETUPP PAGE CALL ");
     if (!isOpen) {
+      //FIRST INIT IS OPEN = TRUE
       onOpen();
     }
   }, [isOpen, onOpen]);

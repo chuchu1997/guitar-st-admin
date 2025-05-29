@@ -1,3 +1,5 @@
+/** @format */
+
 "use client";
 
 import { useStoreModal } from "@/hooks/use-store-modal";
@@ -18,6 +20,11 @@ import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
+import authApi from "@/app/api/auth/auth.api";
+import { UserInterface } from "@/types/user";
+import { Role } from "@/types/auth";
+import StoresAPI from "@/app/api/stores/stores.api";
+import { CreateStoreInterface, StoreInterface } from "@/types/store";
 
 const formSchema = z.object({
   name: z.string().min(1, "Bắt buộc phải nhập tên Store"),
@@ -40,13 +47,26 @@ export const StoreModal = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     try {
       setLoading(true);
-
-      const response = await axios.post("/api/stores", values);
-
-      if (response.status == 200) {
-        window.location.assign(`/${response.data.id}`);
-        toast.success("Tạo store thành công !!");
+      let responseUser = await authApi.getUserProfile();
+      if (responseUser.status === 200) {
+        const { user } = responseUser.data;
+        if (user.role === Role.ADMIN) {
+          const response = await StoresAPI.createStore({
+            name: values.name,
+            userID: user.sub,
+          });
+          console.log(response);
+          if (response.status === 200) {
+            const { store, message } = response.data as {
+              store: StoreInterface;
+              message: string;
+            };
+            toast.success(message);
+            window.location.assign(`/${store.id}`);
+          }
+        }
       }
+
       // const response = await axios.post("/api/stores", values);
       // console.log("response", response.data);
 
@@ -64,8 +84,7 @@ export const StoreModal = () => {
       title="Tạo ra 1 store mới "
       description="Tạo store để quản lý products , categogy ...."
       isOpen={storeModal.isOpen}
-      onClose={storeModal.onClose}
-    >
+      onClose={storeModal.onClose}>
       <div>
         <div className="space-y-4 py-2 pb-4">
           <Form {...form}>
@@ -80,13 +99,11 @@ export const StoreModal = () => {
                       <Input
                         disabled={loading}
                         placeholder="Nhập tên store của bạn muốn tạo ..."
-                        {...field}
-                      ></Input>
+                        {...field}></Input>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
-                )}
-              ></FormField>
+                )}></FormField>
 
               <div className="pt-6 space-x-2 flex items-center justify-end w-full">
                 <Button
@@ -94,8 +111,7 @@ export const StoreModal = () => {
                   variant={"outline"}
                   onClick={() => {
                     storeModal.onClose();
-                  }}
-                >
+                  }}>
                   Cancel
                 </Button>
                 <Button disabled={loading} type="submit">

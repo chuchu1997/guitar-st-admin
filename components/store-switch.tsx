@@ -8,7 +8,7 @@ import {
   PopoverContent,
 } from "@/components/ui/popover";
 import { useStoreModal } from "@/hooks/use-store-modal";
-import { Store } from "@prisma/client";
+
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,13 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
+import { StoreInterface } from "@/types/store";
 type PopoverTriggerProps = React.ComponentPropsWithoutRef<
   typeof PopoverTrigger
 >;
 
 interface StoreSwitchProps extends PopoverTriggerProps {
-  items: Store[];
+  items: StoreInterface[];
 }
 
 export default function StoreSwitcher({
@@ -50,12 +51,12 @@ export default function StoreSwitcher({
   }));
 
   const currentStore = formatItems.find(
-    (item) => item.value === params.storeId
+    (item) => item.value === Number(params.storeId ?? "")
   );
 
   const [open, setOpen] = useState(false);
 
-  const onStoreSelect = (store: { value: string; label: string }) => {
+  const onStoreSelect = (store: { value: number; label: string }) => {
     setOpen(false);
     router.push(`/${store.value}`);
   };
@@ -69,8 +70,7 @@ export default function StoreSwitcher({
           role="combobox"
           aria-expanded={open}
           aria-label="Chọn store"
-          className={cn("w-[200px] justify-between", className)}
-        >
+          className={cn("w-[200px] justify-between", className)}>
           <StoreIcon className="mr-2 h-4 w-4" />
           {currentStore?.label}
           <ChevronsUpDownIcon className="w-4 h-4 shrink-0 ml-auto opacity-50" />
@@ -87,8 +87,7 @@ export default function StoreSwitcher({
                 <CommandItem
                   className="text-sm"
                   key={store.value}
-                  onSelect={() => onStoreSelect(store)}
-                >
+                  onSelect={() => onStoreSelect(store)}>
                   <StoreIcon className="mr-2 h-4 w-4" />
                   {store.label}
                   <Check
@@ -110,8 +109,7 @@ export default function StoreSwitcher({
                 onSelect={() => {
                   setOpen(false);
                   storeModal.onOpen();
-                }}
-              >
+                }}>
                 <PlusCircleIcon className="mr-2 h-5 w-5" />
                 <span>Tạo 1 Store Mới</span>
               </CommandItem>
