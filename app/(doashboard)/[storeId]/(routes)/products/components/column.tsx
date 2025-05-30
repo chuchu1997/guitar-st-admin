@@ -5,24 +5,12 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { CellAction } from "./cell-action";
 import Image from "next/image";
+import { ProductInterface } from "@/types/product";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type ProductColumn = {
-  id: string;
-  imageUrl: string;
-  name: string;
-  isFeatured: boolean;
-  isArchieved: boolean;
-  sku: string;
-  category: string;
-  price: number;
-  slug: string;
-  subCategory: string;
-  stock: number;
-};
 
-export const columns: ColumnDef<ProductColumn>[] = [
+export const columns: ColumnDef<ProductInterface>[] = [
   {
     accessorKey: "name",
     header: "Tên san phẩm",
@@ -39,7 +27,7 @@ export const columns: ColumnDef<ProductColumn>[] = [
     cell: ({ row }) => (
       <div className="relative w-[80px] h-[80px] ">
         <Image
-          src={row.original.imageUrl}
+          src={row.original.images[0].url}
           fill
           className="object-cover rounded-xl"
           loading="eager" // ✅ Ensures images load immediately
@@ -47,21 +35,21 @@ export const columns: ColumnDef<ProductColumn>[] = [
       </div>
     ),
   },
-  {
-    accessorKey: "category",
-    header: "Thuộc Danh Mục",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.original.category}</div>
-    ),
-  },
+  // {
+  //   accessorKey: "category",
+  //   header: "Thuộc Danh Mục",
+  //   cell: ({ row }) => (
+  //     <div className="capitalize">{row.original.}</div>
+  //   ),
+  // },
 
-  {
-    accessorKey: "subCategory",
-    header: "Danh mục con ",
-    cell: ({ row }) => (
-      <div className="capitalize">{row.original.subCategory}</div>
-    ),
-  },
+  // {
+  //   accessorKey: "subCategory",
+  //   header: "Danh mục con ",
+  //   cell: ({ row }) => (
+  //     <div className="capitalize">{row.original.subCategory}</div>
+  //   ),
+  // },
 
   {
     accessorKey: "sku",

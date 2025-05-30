@@ -29,22 +29,23 @@ export default function DashboardLayout(props: LayoutProps) {
     if (calledRef.current) return;
     calledRef.current = true;
     const checkAuth = async () => {
+      console.log("📡 Gọi authApi.getUserProfile");
       const response = await authApi.getUserProfile();
       const { user } = response.data;
+
       if (user && user.role === Role.ADMIN) {
-        const response = await StoresAPI.getStoreRelateWithUser(
-          user.sub,
-          storeId?.toString() ?? ""
-        );
+        const response = await StoresAPI.getStoresByUserID(user.sub);
+
         if (response.status === 200) {
-          const { store } = response.data;
-          if (!store) {
+          const { stores } = response.data;
+          if (!stores) {
+            console.log("⛔ Không có store, redirect...");
             redirect("/");
+            // router.push("/");
           }
         }
       }
     };
-
     checkAuth();
   }, []);
 

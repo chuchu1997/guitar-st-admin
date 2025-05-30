@@ -2,6 +2,7 @@
 import { AuthStorage } from "@/utils/authLocalstorage";
 import axios from "axios";
 import toast from "react-hot-toast";
+
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API,
   timeout: 10000, // Thời gian timeout là 10 giây

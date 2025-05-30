@@ -19,15 +19,16 @@ interface BaseUser {
   createdAt: Date;
   updatedAt: Date;
 }
-export interface UserInterface extends BaseUser { 
-    id:number;
 
-}
 export interface CreateUserInterface extends Omit<Partial<BaseUser>, 'orders' | 'wishlist' | 'reviews' | 'stores'> {
   email: string;
   password: string;
   name: string;
- 
+}
+
+export interface UserInterface extends BaseUser { 
+    id:number;
+
 }
 
 // Dùng khi update user: mọi field đều optional

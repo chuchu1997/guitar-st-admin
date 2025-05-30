@@ -12,6 +12,7 @@ export const AuthStorage = {
   removeToken: () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem(TOKEN_KEY);
+      window.location.href = "/";
     }
   },
 };

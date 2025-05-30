@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { AuthStorage } from "@/utils/authLocalstorage";
 import { StoreInterface } from "@/types/store";
 import { Role } from "@/types/auth";
+import { useStoreModal } from "@/hooks/use-store-modal";
 
 // eslint-disable-next-line @next/next/no-async-client-component
 
@@ -21,11 +22,12 @@ export default function SetupLayout({
   children: React.ReactNode;
 }) {
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const onOpen = useStoreModal((state) => state.onOpen);
+
   const router = useRouter();
 
   const getUserByToken = async () => {
     const responseAuth = await authApi.getUserProfile();
-    console.log("CALL 1", responseAuth);
 
     if (responseAuth.status === 200) {
       const { user } = responseAuth.data;
@@ -34,16 +36,11 @@ export default function SetupLayout({
         //LẤY TẤT CẢ STORES THUỘC VỀ USER NÀY
         if (responseStore.status === 200) {
           const { stores } = responseStore.data as { stores: StoreInterface[] };
-
           if (stores.length > 0) {
             redirect(`/${stores[0].id}`);
+          } else {
+            onOpen();
           }
-
-          // const { stores } = responseStore.data;
-          // if (stores.length > 0) {
-          //   //REDIRECT (SELECT MẶC ĐỊNH LÀ STORE ĐẦU TIÊN !!)
-          //   redirect(`/${stores[0].id}`);
-          // }
         }
       }
     }

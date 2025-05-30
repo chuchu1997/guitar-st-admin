@@ -6,20 +6,17 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import {
-  Category as PrismaCategory,
-  Product,
-  Image,
-  ProductSize,
-  ProductColor,
-  Size,
-  Color,
-} from "@prisma/client";
 
-interface Category extends PrismaCategory {
-  subcategories?: { id: string; name: string }[];
-}
-import { Trash } from "lucide-react";
+import {
+  Trash,
+  Plus,
+  X,
+  Package,
+  Tag,
+  Palette,
+  Ruler,
+  CirclePlus,
+} from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -48,29 +45,24 @@ import ImageUpload from "@/components/ui/image-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import EditorComponent from "@/components/editor";
+import { ImageInterface, ProductInterface } from "@/types/product";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const formSchema = z.object({
-  name: z.string().min(1),
-  categoryId: z.string().min(1),
-  price: z.coerce.number().min(1),
-  images: z.object({ url: z.string() }).array(),
+  name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
+  categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
+  price: z.coerce.number().min(1, "Giá phải lớn hơn 0"),
+  images: z
+    .object({ url: z.string() })
+    .array()
+    .min(1, "Cần ít nhất 1 hình ảnh"),
   isFeatured: z.boolean().default(false).optional(),
-  description: z.string().min(1),
-  slugData: z.string().min(1),
-  sku: z.string().min(1),
-  stockQuantity: z.coerce.number(),
-
-  //IS OPTIONAL
-  sizes: z
-    .array(
-      z.object({
-        sizeId: z.string().min(1), // Add proper validation for id
-        price: z.coerce.number().min(0), // Add price validation
-        stockQuantity: z.coerce.number().min(0), // Add stock quantity validation
-      })
-    )
-    .optional(),
-
+  description: z.string().min(1, "Mô tả sản phẩm là bắt buộc"),
+  slug: z.string().min(1, "Slug là bắt buộc"),
+  sku: z.string().min(1, "SKU là bắt buộc"),
+  stockQuantity: z.coerce.number().min(0, "Số lượng không được âm"),
+  // Required colors selection
   colors: z
     .array(
       z.object({
@@ -79,98 +71,90 @@ const formSchema = z.object({
         stockQuantity: z.coerce.number().min(0),
       })
     )
+    .min(1, "Vui lòng chọn ít nhất 1 màu sắc"),
+  // Optional sizes
+  sizes: z
+    .array(
+      z.object({
+        sizeId: z.string().min(1),
+        price: z.coerce.number().min(0),
+        stockQuantity: z.coerce.number().min(0),
+      })
+    )
     .optional(),
   viewCount: z.coerce.number().default(0).optional(),
   ratingCount: z.coerce.number().default(5).optional(),
-
-  subCategoryId: z.string().optional(),
 });
-interface ProductProps {
-  initialData:
-    | (Product & {
-        category: Category;
-        images: Image[];
-        productSizes: (ProductSize & {
-          size: Size;
-        })[];
-        productColors: (ProductColor & {
-          color: Color;
-        })[];
-      })
-    | null;
-  defaultCategoryId?: string; //
 
-  sizes: Size[];
-  colors: Color[];
+// Mock data - replace with your actual data fetching
+const mockCategories = [
+  { id: "1", name: "Áo thun", icon: "👕" },
+  { id: "2", name: "Quần jeans", icon: "👖" },
+  { id: "3", name: "Giày dép", icon: "👟" },
+  { id: "4", name: "Phụ kiện", icon: "🎒" },
+];
+
+const mockColors = [
+  { id: "1", name: "Đen", value: "#000000" },
+  { id: "2", name: "Trắng", value: "#FFFFFF" },
+  { id: "3", name: "Xanh Navy", value: "#1e40af" },
+  { id: "4", name: "Đỏ", value: "#dc2626" },
+  { id: "5", name: "Xám", value: "#6b7280" },
+  { id: "6", name: "Xanh lá", value: "#16a34a" },
+];
+
+const mockSizes = [
+  { id: "1", name: "XS", label: "Extra Small" },
+  { id: "2", name: "S", label: "Small" },
+  { id: "3", name: "M", label: "Medium" },
+  { id: "4", name: "L", label: "Large" },
+  { id: "5", name: "XL", label: "Extra Large" },
+  { id: "6", name: "XXL", label: "Double Extra Large" },
+];
+
+interface ProductProps {
+  initialData: (ProductInterface & {}) | null;
 }
 
 type ProductFormValues = z.infer<typeof formSchema>;
 
-export const ProductForm: React.FC<ProductProps> = ({
-  initialData,
-  defaultCategoryId,
-  sizes,
-  colors,
-}) => {
+export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
+  const [showSizes, setShowSizes] = useState(false);
+  const [showColors, setShowColors] = useState(false);
+  const [categories, setCategories] = useState(false);
 
   const params = useParams();
   const router = useRouter();
-  const title = initialData ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm ";
-  const description = initialData ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm mới ";
-  const toastMessage = initialData ? "Đã chỉnh sửa " : "Đã tạo sản phẩm ";
-  const action = initialData ? "Lưu thay đổi " : "Tạo sản phẩm";
-  const [open, setOpen] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-
-  const [showEditor, setShowEditor] = useState(false);
+  const title = initialData ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm mới";
+  const description = initialData
+    ? "Cập nhật thông tin sản phẩm của bạn"
+    : "Thêm sản phẩm mới vào cửa hàng";
+  const toastMessage = initialData
+    ? "Sản phẩm đã được cập nhật!"
+    : "Sản phẩm đã được tạo thành công!";
+  const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: initialData
-      ? {
-          ...initialData,
-          price: parseFloat(String(initialData.price)),
-          slugData: initialData.slug,
-          sizes: sizes
-            .map((size) => {
-              const matched = initialData.productSizes.find(
-                (ps) => ps.sizeId === size.id
-              );
-
-              return matched
-                ? {
-                    sizeId: size.id,
-                    price: matched.price ?? 0,
-                    stockQuantity: matched.stockQuantity ?? 0,
-                  }
-                : undefined;
-            })
-            .filter(Boolean), // chỉ giữ những cái đã chọn
-          colors: initialData.productColors.map((color) => ({
-            ...color,
-            price: color.price ?? 0,
-          })),
-        }
-      : {
-          sizes: [],
-          colors: [],
-          name: "",
-          categoryId: defaultCategoryId ?? "",
-          price: 0,
-          images: [],
-          isFeatured: false,
-          description: "",
-          slugData: "",
-          sku: "",
-          stockQuantity: 0,
-          viewCount: 0,
-          ratingCount: 5,
-        },
+    defaultValues: {
+      name: initialData?.name || "",
+      categoryId: initialData?.categoryId.toString() ?? "",
+      price: initialData?.price || 0,
+      images: initialData?.images || [],
+      isFeatured: initialData?.isFeatured || false,
+      description: initialData?.description || "",
+      slug: initialData?.slug || "",
+      sku: initialData?.sku || "",
+      stockQuantity: initialData?.stock || 0,
+      colors: initialData?.colors || [],
+      sizes: initialData?.sizes || [],
+      viewCount: initialData?.viewCount || 0,
+      ratingCount: initialData?.ratingCount || 5,
+    },
   });
 
   const onSubmit = async (data: ProductFormValues) => {
@@ -183,42 +167,106 @@ export const ProductForm: React.FC<ProductProps> = ({
           data
         );
       } else {
-        //CREATE !!!
-
         await axios.post(`/api/${params.storeId}/products`, data);
       }
+
       router.refresh();
       router.push(`/${params.storeId}/products/`);
       toast.success(toastMessage);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (_err) {
-      toast.error("Something when wrong !!");
+    } catch (error) {
+      toast.error("Có lỗi xảy ra, vui lòng thử lại!");
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
+
   const onDelete = async () => {
     try {
       setLoading(true);
-
       await axios.delete(`/api/${params.storeId}/products/${params.slug}`);
       router.refresh();
-      toast.success("Xóa Sản Phẩm  thành công !!");
-    } catch (err) {
-      toast.error(
-        `Make sure you removed all products using this category first !! ${
-          err instanceof Error ? err.message : String(err)
-        }`
-      );
+      router.push(`/${params.storeId}/products/`);
+      toast.success("Sản phẩm đã được xóa thành công!");
+    } catch (error) {
+      toast.error("Không thể xóa sản phẩm. Vui lòng thử lại!");
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
+  const addColorVariant = (colorId: string) => {
+    const colors = form.getValues("colors") || [];
+    const existingColor = colors.find((c) => c.colorId === colorId);
+
+    if (!existingColor) {
+      form.setValue("colors", [
+        ...colors,
+        { colorId, price: form.getValues("price"), stockQuantity: 0 },
+      ]);
+    }
+  };
+  const createNewColorVariant = ({
+    name,
+    value,
+  }: {
+    name: string;
+    value: string;
+  }) => {
+    const colors = form.getValues("colors") || [];
+
+    const newColor = {
+      id: "4",
+      name: name,
+      value: value,
+    };
+    const existingColor = colors.find((c) => c.colorId === newColor.id);
+    if (!existingColor) {
+    }
+
+    // { id: "1", name: "Đen", value: "#000000" },
+  };
+  const removeColorVariant = (colorId: string) => {
+    const colors = form.getValues("colors") || [];
+    form.setValue(
+      "colors",
+      colors.filter((c) => c.colorId !== colorId)
+    );
+  };
+
+  const addSizeVariant = (sizeId: string) => {
+    const sizes = form.getValues("sizes") || [];
+    const existingSize = sizes.find((s) => s.sizeId === sizeId);
+
+    if (!existingSize) {
+      form.setValue("sizes", [
+        ...sizes,
+        { sizeId, price: form.getValues("price"), stockQuantity: 0 },
+      ]);
+    }
+  };
+
+  const removeSizeVariant = (sizeId: string) => {
+    const sizes = form.getValues("sizes") || [];
+    form.setValue(
+      "sizes",
+      sizes.filter((s) => s.sizeId !== sizeId)
+    );
+  };
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+  const fetchCategoriesFromSV = () => {};
+
   if (!isMounted) return null;
 
+  const selectedColors = form.watch("colors") || [];
+  const selectedSizes = form.watch("sizes") || [];
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6 pb-20">
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}
@@ -228,18 +276,20 @@ export const ProductForm: React.FC<ProductProps> = ({
           await onDelete();
         }}
       />
-      <div className="flex items-center justify-between my-4">
-        <Heading title={title} description={description} />
-        {/* BUTTON DELETE JUST WORKING ON EDIT MODE  */}
+
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <Heading title={title} description={description} />
+        </div>
         {initialData && (
           <Button
             variant="destructive"
-            size="icon"
+            size="sm"
             disabled={loading}
-            onClick={async () => {
-              setOpen(true);
-            }}>
-            <Trash className="w-4 h-4 "></Trash>
+            onClick={() => setOpen(true)}
+            className="gap-2">
+            <Trash className="w-4 h-4" />
+            Xóa sản phẩm
           </Button>
         )}
       </div>
@@ -247,415 +297,543 @@ export const ProductForm: React.FC<ProductProps> = ({
       <Separator />
 
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="w-full md:w-1/2 mx-auto">
-          <div className="grid grid-cols-1 gap-8 mt-[15px]">
-            {initialData?.category?.subcategories &&
-              initialData.category.subcategories.length > 0 && (
-                <FormField
-                  control={form.control}
-                  name="subCategoryId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Danh mục con</FormLabel>
-                      <div className="relative">
-                        <Select
-                          disabled={loading}
-                          onValueChange={field.onChange}
-                          value={field.value}
-                          defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Chọn danh mục con" />
-                            </SelectTrigger>
-                          </FormControl>
-
-                          <SelectContent position="popper">
-                            {initialData?.category?.subcategories?.map(
-                              (subcategory) => (
-                                <SelectItem
-                                  key={subcategory.id}
-                                  value={subcategory.id}>
-                                  {subcategory.name}
-                                </SelectItem>
-                              )
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-            {/* <FormField
-              control={form.control}
-              name="subCategoryId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Danh mục con</FormLabel>
-                  <div className="relative ">
-                    <Select
-                      disabled={
-                        categories.find(
-                          (category) => category.id === form.watch("categoryId")
-                        )?.subcategories?.length === 0
-                      } // Disable nếu không có subcategories
-                      onValueChange={field.onChange}
-                      value={field.value}
-                      defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue
-                            defaultValue={field.value}
-                            placeholder="Select a sub category"
-                          />
-                        </SelectTrigger>
-                      </FormControl>
-
-                      <SelectContent position="popper">
-                        {subcategories.map((subcategory) => (
-                          <SelectItem
-                            key={subcategory.id}
-                            value={subcategory.id}>
-                            {subcategory.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </FormItem>
-              )}
-            /> */}
-            <FormField
-              control={form.control}
-              name="images"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Hình ảnh sản phẩm </FormLabel>
-                  <FormControl>
-                    <ImageUpload
-                      isMultiple={true}
-                      disabled={loading}
-                      onChange={(url) => {
-                        field.onChange(
-                          (field.value = [...field.value, { url }])
-                        );
-                      }}
-                      onRemove={(url) =>
-                        field.onChange([
-                          ...field.value.filter(
-                            (current) => current.url !== url
-                          ),
-                        ])
-                      }
-                      value={field.value.map(
-                        (image) => image.url
-                      )}></ImageUpload>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tên sản phẩm </FormLabel>
-                  <FormControl>
-                    <Input
-                      disabled={loading}
-                      {...field}
-                      placeholder="Tên sản phẩm   "></Input>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="slugData"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Slug </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="text"
-                      pattern="\S*"
-                      disabled={loading}
-                      {...field}
-                      placeholder="Slug "></Input>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mô tả sản phẩm </FormLabel>
-                  {!showEditor ? (
-                    <div
-                      className="border p-4 rounded-lg text-gray-500 cursor-pointer hover:bg-gray-100"
-                      onClick={() => setShowEditor(true)}>
-                      ✍️ Click để thêm mô tả
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <FormControl>
-                        <EditorComponent
-                          value={field.value}
-                          onChange={field.onChange}
-                        />
-                      </FormControl>
-
-                      <div className="text-right">
-                        <Button
-                          type="button"
-                          onClick={() => setShowEditor(false)}>
-                          Ẩn Text Editor
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="stockQuantity"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Số lượng </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      disabled={loading}
-                      {...field}
-                      placeholder="Stock label  "></Input>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="price"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Giá </FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      disabled={loading}
-                      {...field}
-                      placeholder="Price label  "></Input>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
-            {/* NẾU CÓ COLOR THÌ CHO CHỌN  */}
-            {colors.length > 0 && (
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          {/* Product Images */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Hình ảnh sản phẩm
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
               <FormField
                 control={form.control}
-                name="colors"
+                name="images"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Màu sắc</FormLabel>
-                    <FormDescription>
-                      Chọn các màu sắc có sẵn cho sản phẩm.
-                    </FormDescription>
-                    <div className="flex flex-col space-y-2">
-                      {colors.map((color) => (
-                        <FormItem
-                          key={color.id}
-                          className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.some(
-                                (item) => item.colorId === color.id
-                              )}
-                              onCheckedChange={(checked) => {
-                                const isChecked = checked === true;
-                                if (isChecked) {
-                                  field.onChange([
-                                    ...(field.value || []),
-                                    color.id,
-                                  ]);
-                                } else {
-                                  field.onChange(
-                                    (field.value || []).filter(
-                                      (val) => val.colorId !== color.id
-                                    )
-                                  );
-                                }
-                              }}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="text-sm font-normal">
-                              {color.name}
-                            </FormLabel>
-                          </div>
-                        </FormItem>
-                      ))}
-                    </div>
-                  </FormItem>
-                )}
-              />
-            )}
-            {/* NẾU CÓ SIZE THÌ CHO CHỌN */}
-            {sizes.length > 0 && (
-              <FormField
-                control={form.control}
-                name="sizes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Sizes</FormLabel>
-                    <FormDescription>
-                      Chọn các kích thước có sẵn cho sản phẩm.
-                    </FormDescription>
-
-                    <div className="flex flex-col space-y-2">
-                      {sizes.map((size) => {
-                        console.log("SIZES", sizes);
-                        const selectedSize = field.value?.find(
-                          (item) => item.sizeId === size.id
-                        );
-                        const isChecked = !!selectedSize;
-
-                        return (
-                          <FormItem
-                            key={size.id}
-                            className="flex flex-col space-y-1">
-                            <div className="flex items-center space-x-3">
-                              <FormControl>
-                                <Checkbox
-                                  checked={isChecked}
-                                  onCheckedChange={(checked) => {
-                                    const isChecked = checked === true;
-                                    if (isChecked) {
-                                      field.onChange([
-                                        ...(field.value || []),
-                                        {
-                                          sizeId: size.id,
-                                          price: selectedSize?.price,
-                                          stockQuantity:
-                                            selectedSize?.stockQuantity,
-                                        },
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        (field.value || []).filter(
-                                          (val) => val.sizeId !== size.id
-                                        )
-                                      );
-                                    }
-                                  }}
-                                />
-                              </FormControl>
-                              <FormLabel className="text-sm font-normal">
-                                {size.name}
-                              </FormLabel>
-                            </div>
-                            {/* CREATE BUTTON FOR INPUT PRICE AND STOCK */}
-
-                            {isChecked && (
-                              <div className="flex space-x-3 pl-6">
-                                <Input
-                                  type="number"
-                                  placeholder="Giá"
-                                  className="w-28"
-                                  value={selectedSize.price ?? ""}
-                                  onChange={(e) => {
-                                    const newValue = e.target.value;
-                                    field.onChange(
-                                      (field.value || []).map((val) =>
-                                        val.sizeId === size.id
-                                          ? { ...val, price: newValue }
-                                          : val
-                                      )
-                                    );
-                                  }}
-                                />
-                                <Input
-                                  type="number"
-                                  placeholder="Tồn kho"
-                                  className="w-28"
-                                  value={selectedSize.stockQuantity ?? ""}
-                                  onChange={(e) => {
-                                    const newValue = e.target.value;
-                                    field.onChange(
-                                      (field.value || []).map((val) =>
-                                        val.sizeId === size.id
-                                          ? { ...val, stockQuantity: newValue }
-                                          : val
-                                      )
-                                    );
-                                  }}
-                                />
-                              </div>
-                            )}
-
-                            {/* CREATE BUTTON FOR INPUT PRICE AND STOCK */}
-                          </FormItem>
-                        );
-                      })}
-                    </div>
+                    <FormControl>
+                      <ImageUpload
+                        isMultiple={true}
+                        disabled={loading}
+                        onChange={(url) => {
+                          field.onChange([...field.value, { url }]);
+                        }}
+                        onRemove={(url) =>
+                          field.onChange(
+                            field.value.filter((current) => current.url !== url)
+                          )
+                        }
+                        value={field.value.map((image) => image.url)}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            )}
-            <FormField
-              control={form.control}
-              name="sku"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SKU </FormLabel>
-                  <FormControl>
-                    <Input
+            </CardContent>
+          </Card>
+
+          {/* Basic Information */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="w-5 h-5" />
+                Thông tin cơ bản
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tên sản phẩm *</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        {...field}
+                        placeholder="Nhập tên sản phẩm"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="categoryId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Danh mục *</FormLabel>
+                    <Select
                       disabled={loading}
-                      {...field}
-                      placeholder="SKU  "></Input>
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                      onValueChange={field.onChange}
+                      value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn danh mục" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {mockCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            <div className="flex items-center gap-2">
+                              <span>{category.icon}</span>
+                              {category.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="isFeatured"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                  <FormControl>
-                    <Checkbox
-                      onCheckedChange={field.onChange}
-                      checked={field.value}></Checkbox>
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel> Sản phẩm nổi bật ? </FormLabel>
+              <FormField
+                control={form.control}
+                name="slug"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Slug *</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        {...field}
+                        placeholder="san-pham-moi"
+                        pattern="\S*"
+                      />
+                    </FormControl>
                     <FormDescription>
-                      Nếu nhấn vào thì sản phẩm sẽ được hiển thị ở trang chủ
+                      URL thân thiện (không dấu, không khoảng trắng)
                     </FormDescription>
-                  </div>
-                </FormItem>
-              )}
-            />
-          </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-          <Button
-            disabled={loading}
-            className="ml-auto mt-4 cursor-pointer"
-            type="submit">
-            {action}
-          </Button>
+              <FormField
+                control={form.control}
+                name="sku"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKU *</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        {...field}
+                        placeholder="SP-001"
+                      />
+                    </FormControl>
+                    <FormDescription>Mã sản phẩm duy nhất</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Giá cơ bản *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        disabled={loading}
+                        {...field}
+                        placeholder="299000"
+                      />
+                    </FormControl>
+                    <FormDescription>Giá bán cơ bản (VNĐ)</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="stockQuantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Số lượng tồn kho</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        disabled={loading}
+                        {...field}
+                        placeholder="100"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Product Description */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Mô tả sản phẩm</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    {!showEditor ? (
+                      <div
+                        className="border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors"
+                        onClick={() => setShowEditor(true)}>
+                        <div className="text-4xl mb-2">✍️</div>
+                        <p className="text-gray-500">
+                          Click để thêm mô tả sản phẩm
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <FormControl>
+                          <EditorComponent
+                            value={field.value}
+                            onChange={field.onChange}
+                          />
+                        </FormControl>
+                        <div className="text-right">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setShowEditor(false)}>
+                            Ẩn Editor
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Color Variants */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Palette className="w-5 h-5" />
+                  Màu sắc của sản phẩm (Tùy chọn)
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowColors(!showColors)}>
+                  {showColors ? "Ẩn" : "Thêm"} Màu Sắc
+                </Button>
+              </div>
+            </CardHeader>
+            {showColors && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {mockColors.map((color) => {
+                    const isSelected = selectedColors.some(
+                      (s) => s.colorId === color.id
+                    );
+
+                    return (
+                      <div
+                        key={color.id}
+                        className={`border-2 rounded-lg p-3 cursor-pointer transition-all text-center ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            removeColorVariant(color.id);
+                          } else {
+                            addColorVariant(color.id);
+                          }
+                        }}>
+                        <div className="font-bold text-lg">{color.name}</div>
+                        <div
+                          className="w-6 h-6 rounded-full border-2 border-gray-300"
+                          style={{ backgroundColor: color.value }}
+                        />
+                        <div className="text-xs text-gray-500">
+                          {color.value}
+                        </div>
+                        {isSelected && (
+                          <div className="mt-1 text-blue-500 text-xs">
+                            ✓ Đã chọn
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  <Button
+                    type="button"
+                    className="min-h-[100px] border-2 rounded-lg p-3 cursor-pointer transition-all text-center">
+                    Tạo mới Màu Sắc
+                  </Button>
+                </div>
+
+                {selectedColors.length > 0 && (
+                  <div className="space-y-4 mt-6">
+                    <h4 className="font-medium">
+                      Cấu hình kích thước đã chọn:
+                    </h4>
+                    {selectedColors.map((colorVariant, index) => {
+                      const color = mockColors.find(
+                        (s) => s.id === colorVariant.colorId
+                      );
+                      return (
+                        <div
+                          key={colorVariant.colorId}
+                          className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Badge variant="outline">{color?.name}</Badge>
+                            <span className="text-sm text-gray-600">
+                              {color?.value}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                removeColorVariant(colorVariant.colorId)
+                              }>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`colors.${index}.price`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Giá</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      disabled={loading}
+                                      {...field}
+                                      placeholder="299000"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`colors.${index}.stockQuantity`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Số lượng</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      disabled={loading}
+                                      {...field}
+                                      placeholder="10"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+          {/* Size Variants (Optional) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Ruler className="w-5 h-5" />
+                  Kích thước sản phẩm (Tùy chọn)
+                </CardTitle>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSizes(!showSizes)}>
+                  {showSizes ? "Ẩn" : "Thêm"} kích thước
+                </Button>
+              </div>
+            </CardHeader>
+            {showSizes && (
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                  {mockSizes.map((size) => {
+                    const isSelected = selectedSizes.some(
+                      (s) => s.sizeId === size.id
+                    );
+                    return (
+                      <div
+                        key={size.id}
+                        className={`border-2 rounded-lg p-3 cursor-pointer transition-all text-center ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            removeSizeVariant(size.id);
+                          } else {
+                            addSizeVariant(size.id);
+                          }
+                        }}>
+                        <div className="font-bold text-lg">{size.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {size.label}
+                        </div>
+                        {isSelected && (
+                          <div className="mt-1 text-blue-500 text-xs">
+                            ✓ Đã chọn
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {selectedSizes.length > 0 && (
+                  <div className="space-y-4 mt-6">
+                    <h4 className="font-medium">
+                      Cấu hình kích thước đã chọn:
+                    </h4>
+                    {selectedSizes.map((sizeVariant, index) => {
+                      const size = mockSizes.find(
+                        (s) => s.id === sizeVariant.sizeId
+                      );
+                      return (
+                        <div
+                          key={sizeVariant.sizeId}
+                          className="border rounded-lg p-4 bg-gray-50">
+                          <div className="flex items-center gap-3 mb-3">
+                            <Badge variant="outline">{size?.name}</Badge>
+                            <span className="text-sm text-gray-600">
+                              {size?.label}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                removeSizeVariant(sizeVariant.sizeId)
+                              }>
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name={`sizes.${index}.price`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Giá</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      disabled={loading}
+                                      {...field}
+                                      placeholder="299000"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name={`sizes.${index}.stockQuantity`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Số lượng</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      disabled={loading}
+                                      {...field}
+                                      placeholder="10"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            )}
+          </Card>
+
+          {/* Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cài đặt sản phẩm</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FormField
+                control={form.control}
+                name="isFeatured"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={loading}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-base font-medium">
+                        Sản phẩm nổi bật
+                      </FormLabel>
+                      <FormDescription>
+                        Sản phẩm sẽ được hiển thị trong danh sách sản phẩm nổi
+                        bật trên trang chủ
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Submit Button */}
+          <div className="flex items-center gap-4 pt-6">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="min-w-[150px]"
+              size="lg">
+              {loading ? "Đang xử lý..." : action}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => router.back()}
+              disabled={loading}
+              size="lg">
+              Hủy bỏ
+            </Button>
+          </div>
         </form>
       </Form>
-
-      <Separator />
     </div>
   );
 };

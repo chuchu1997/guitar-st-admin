@@ -1,78 +1,51 @@
+"use client";
+
 import prismadb from "@/lib/primadb";
 import { ProductForm } from "./components/product.form";
-// import { CategoryForm } from "./components/category-form";
-// import { BillboardsForm } from "./components/billboard-form";
-import { Size, Color, Product } from "@prisma/client";
+import { useParams } from "next/navigation";
+import ProductAPI from "@/app/api/products/products.api";
+import { useEffect, useState } from "react";
+import { ProductInterface } from "@/types/product";
 
 interface ProductPageProps {
   params: Promise<{ slug: string; storeId: string }>;
 }
 
-const ProductPage = async (props: ProductPageProps) => {
-  const { params } = props;
-  const { slug, storeId } = await params;
- 
-  const product = await prismadb.product.findUnique({
-    where: {
-      slug: decodeURIComponent(slug),
-      storeId: storeId,
-    },
-    include: {
-      category: {
-        include: {
-          subcategories: true, // ✅ Include subcategories here!
-        },
-      }
-      ,
+const ProductPage =  () => {
 
-      productSizes: {
-        include: {
-          size: true, // Include the size details
-        },
-      },
+  const {storeId,slug} = useParams();
+  const [productData,setProductData] = useState<ProductInterface |null>(null);
 
-      productColors: {
-        include: {
-          color: true, // Include the color details
-        },
-      },
-      images: true, // Include related image if required by ProductForm
-    },
-  });
-  
-  let sizes: Size[] = [];
-  let colors: Color[] = [];
-  // Lấy danh sách màu sắc từ productColors nếu đã include
-  if (!product?.productColors || product.productColors.length === 0) {
-    colors = await prismadb.color.findMany({
-      where: {
-        storeId: storeId,
-      },
-    });
-  } else {
-    colors = product.productColors.map((productColor) => productColor.color); // hoặc lấy từ product.productSizes nếu đã include
+  console.log("STORE ID",storeId);
+  console.log("slug",slug)
+    useEffect(()=>{
+      getProductBySlug();
+  },[])
+  const getProductBySlug = async ()=>{
+    if(slug){
+       const response = await ProductAPI.getProductBySlug(slug.toString())
+       console.log("response",response)
+       if(response.status === 200){
+        const {product} = response.data as {product:ProductInterface}
+      
+        setProductData(product)
+     
+
+
+       }
+    }
+   
   }
-
-  sizes = await prismadb.size.findMany({
-    where: {
-      storeId: storeId,
-    },
-  });
-
-  const defaultCategory = await prismadb.category.findFirst({
-    where: {
-      storeId,
-      slug: "san-pham",
-    },
-  });
+ 
   return (
     <div className="flex">
       <div className="flex-1 space-y-4 p-8 pt-6">
+      
         <ProductForm
-          initialData={product}
-          sizes={sizes}
-          colors={colors}
-          defaultCategoryId={defaultCategory?.id}
+          initialData={productData}
+          // sizes={sizes}
+          // colors={colors}
+          // defaultCategoryId={defaultCategory?.id}
         />
       </div>
     </div>

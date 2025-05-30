@@ -102,12 +102,7 @@ export function AppSidebar() {
         icon: BookMinusIcon,
         active: pathname === `/${params.storeId}/categories`,
       },
-      {
-        href: `/${params.storeId}/sub-categories`,
-        label: "Danh mục con",
-        icon: BookCopyIcon,
-        active: pathname === `/${params.storeId}/sub-categories`,
-      },
+    
     ],
     settings: [
       {
@@ -175,7 +170,7 @@ export function AppSidebar() {
     <Sidebar className = " top-0 h-screen w-64 z-50 shadow-md">
       <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel>Admin Application</SidebarGroupLabel>
+          <SidebarGroupLabel>Trang Quản Lý (ADMIN)</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {renderMenuItems(routes.overview)}

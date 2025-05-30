@@ -26,25 +26,27 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Edit, Trash2, Plus, FolderTree } from "lucide-react";
 import axios from "axios";
+import CategoryAPI from "@/app/api/categories/categories.api";
+import { useParams } from "next/navigation";
+import {
+  CategoryInterface,
+  CreateCategoryInterface,
+  UpdateCategoryInterface,
+} from "@/types/categories";
+import toast from "react-hot-toast";
 
-// Define types
-export interface Category {
-  id?: number;
-  name: string;
-  slug: string;
-  description: string;
-  parentId: number | null;
-  createdAt: Date;
-  updatedAt: Date;
-  children?: Category[];
+// Extended interface for tree rendering
+interface CategoryWithChildren extends CategoryInterface {
+  children?: CategoryWithChildren[];
 }
 
-// Mock data to simulate API calls
-// const initialCategories: Category[] = [
+// const initialCategories: CategoryInterface[] = [
 //   {
 //     id: 1,
 //     name: "Electronics",
 //     slug: "electronics",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Electronic gadgets",
 //     parentId: null,
 //     createdAt: new Date(),
@@ -54,6 +56,8 @@ export interface Category {
 //     id: 2,
 //     name: "Clothing",
 //     slug: "clothing",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Fashion items",
 //     parentId: null,
 //     createdAt: new Date(),
@@ -63,6 +67,8 @@ export interface Category {
 //     id: 3,
 //     name: "Books",
 //     slug: "books",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Reading materials",
 //     parentId: null,
 //     createdAt: new Date(),
@@ -72,6 +78,8 @@ export interface Category {
 //     id: 4,
 //     name: "Smartphones",
 //     slug: "smartphones",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Mobile phones",
 //     parentId: 1,
 //     createdAt: new Date(),
@@ -81,6 +89,8 @@ export interface Category {
 //     id: 6,
 //     name: "Men",
 //     slug: "men",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Men clothing",
 //     parentId: 2,
 //     createdAt: new Date(),
@@ -90,6 +100,8 @@ export interface Category {
 //     id: 7,
 //     name: "Women",
 //     slug: "women",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "Women clothing",
 //     parentId: 2,
 //     createdAt: new Date(),
@@ -99,6 +111,8 @@ export interface Category {
 //     id: 10,
 //     name: "T-shirts",
 //     slug: "t-shirts",
+//     storeId: 1,
+//     imageBillboard: "",
 //     description: "T-shirts for men",
 //     parentId: 6,
 //     createdAt: new Date(),
@@ -107,12 +121,14 @@ export interface Category {
 // ];
 
 export default function CategoriesManagement() {
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { storeId } = useParams();
+
+  const [categories, setCategories] = useState<CategoryInterface[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  // const [categories, setCategories] = useState<Category[]>(initialCategories);
   const [name, setName] = useState<string>("");
   const [slug, setSlug] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [imageBillboard, setImageBillboard] = useState<string>("");
   const [parentId, setParentId] = useState<string>("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null
@@ -120,6 +136,7 @@ export default function CategoriesManagement() {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showAlert, setShowAlert] = useState<boolean>(false);
   const [alertMessage, setAlertMessage] = useState<string>("");
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -131,34 +148,71 @@ export default function CategoriesManagement() {
   }, [isMounted]);
 
   if (!isMounted) return null;
-  const fetchCategoriesFromAPI = async () => {
-    setCategories([]);
-    const response = await axios.get("http://localhost:3000/categories", {
-      params: {
-        justGetParent: true,
-      },
-    }); // Replace with your API endpoint
-    console.log("RESPOJNMSE", response);
-    if (response.status === 200) {
-      const data = await response.data;
 
-      setCategories(data);
-    } else {
-      console.error("Failed to fetch categories");
+  const fetchCategoriesFromAPI = async () => {
+    let response = await CategoryAPI.getCategoriesRelateWithStoreID({
+      justGetParent: false,
+      storeID: Number(storeId),
+    });
+    if (response.status === 200) {
+      const { categories } = response.data as {
+        categories: CategoryInterface[];
+      };
+      setCategories(categories);
+    }
+    console.log("RES", response);
+  };
+
+  const onCreateCategory = async (category: CreateCategoryInterface) => {
+    let response = await CategoryAPI.createCategory(category);
+    if (response.status === 200) {
+      const { category, message } = response.data as {
+        message: string;
+        category: CategoryInterface;
+      };
+      toast.success(message);
+      setCategories([...categories, category]);
+    }
+
+    // let ss = await axios.post("http://localhost:3000/categories", category);
+    // console.log("SS data", ss);
+  };
+
+  const onUpdateCategory = async (category: UpdateCategoryInterface) => {
+    // TODO: Implement update API call
+
+    const response = await CategoryAPI.updateCategory(category);
+    if (response.status === 200) {
+      const { message } = response.data as { message: string };
+      toast.success(message);
     }
   };
-  const onCreateCategory = async (category: Category) => {
-    let ss = await axios.post("http://localhost:3000/categories", category);
-    console.log("SS data", ss);
+
+  const onDeleteCategory = async (categoryId: number) => {
+    // TODO: Implement delete API call
+    const response = await CategoryAPI.deleteCategoryFromID(
+      categoryId,
+      Number(storeId)
+    );
+    if (response.status === 200) {
+      const { message } = response.data as {
+        message: string;
+        category: CategoryInterface;
+      };
+      toast.success(message);
+
+      setCategories((prev) =>
+        prev.filter((category) => category.id !== categoryId)
+      );
+    }
+    //  setCategories(prev => prev.filter(category => category.id !== categoryId));
   };
-  const onUpdateCategory = async (category: Category) => {};
-  const onDeleteCategory = async (categoryId: number) => {};
 
   // Build category tree
   const buildCategoryTree = (
-    items: Category[],
+    items: CategoryInterface[],
     parentId: number | null = null
-  ): Category[] => {
+  ): CategoryWithChildren[] => {
     return items
       .filter((item) => item.parentId === parentId)
       .map((item) => ({
@@ -171,42 +225,43 @@ export default function CategoriesManagement() {
 
   // Create a new category
   const handleCreateCategory = async () => {
-    if (!name || !description || !slug) {
-      setAlertMessage("Name and description are required");
+    if (!name || !description || !slug || !imageBillboard) {
+      setAlertMessage("Tên , mô tả , slug , imageURL không được bỏ trống");
       setShowAlert(true);
       return;
     }
 
-    const newCategory: Category = {
+    const newCategory: CreateCategoryInterface = {
       name,
-      slug: slug.toLowerCase().replace(/\s+/g, "-").trim(), // Sửa lại đúng cú pháp
-
+      slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
+      storeId: Number(storeId),
+      imageBillboard,
       description,
       parentId: parentId === "0" ? null : parentId ? Number(parentId) : null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
     };
-    await onCreateCategory(newCategory);
 
-    // setCategories([...categories, newCategory]);
+    await onCreateCategory(newCategory);
     resetForm();
     setIsDialogOpen(false);
   };
 
   // Edit a category
-  const handleEditCategory = (category: Category) => {
-    setEditingCategoryId(category.id ?? 0);
+  const handleEditCategory = (category: CategoryInterface) => {
+    setEditingCategoryId(category.id);
     setName(category.name);
     setSlug(category.slug);
     setDescription(category.description);
+    setImageBillboard(category.imageBillboard);
     setParentId(category.parentId ? String(category.parentId) : "");
     setIsDialogOpen(true);
   };
 
   // Update category
-  const handleUpdateCategory = () => {
-    if (!name || !description || !slug) {
-      setAlertMessage("Name ,Slug,  description are required");
+  const handleUpdateCategory = async () => {
+    if (!name || !description || !slug || !imageBillboard) {
+      setAlertMessage(
+        "Name, slug, imageBillboard and description are required"
+      );
       setShowAlert(true);
       return;
     }
@@ -216,8 +271,9 @@ export default function CategoriesManagement() {
         return {
           ...cat,
           name,
-          slug: slug.toLowerCase().replace(/\s+/g, "-").trim(), // Sửa lại đúng cú pháp
+          slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
           description,
+          imageBillboard,
           parentId:
             parentId === "0" ? null : parentId ? Number(parentId) : null,
           updatedAt: new Date(),
@@ -225,8 +281,16 @@ export default function CategoriesManagement() {
       }
       return cat;
     });
-
     setCategories(updatedCategories);
+
+    const editingCategory = updatedCategories.find(
+      (cat) => cat.id === editingCategoryId
+    );
+    if (editingCategory) {
+      await onUpdateCategory(editingCategory);
+      // xử lý nếu không tìm thấy category
+    }
+
     resetForm();
     setIsDialogOpen(false);
   };
@@ -236,32 +300,19 @@ export default function CategoriesManagement() {
     setName("");
     setSlug("");
     setDescription("");
+    setImageBillboard("");
     setParentId("");
     setEditingCategoryId(null);
     setShowAlert(false);
   };
 
   // Delete a category
-  const handleDeleteCategory = (categoryId: number) => {
-    // Check if category has subcategories
-    const hasSubcategories = categories.some(
-      (cat) => cat.parentId === categoryId
-    );
-
-    if (hasSubcategories) {
-      setAlertMessage(
-        "Cannot delete a category that has subcategories. Delete the subcategories first."
-      );
-      setShowAlert(true);
-      return;
-    }
-
-    const updatedCategories = categories.filter((cat) => cat.id !== categoryId);
-    setCategories(updatedCategories);
-  };
 
   // Render category tree
-  const renderCategoryTree = (categories: Category[], depth = 0) => {
+  const renderCategoryTree = (
+    categories: CategoryWithChildren[],
+    depth = 0
+  ) => {
     return (
       <ul className={`${depth > 0 ? "pl-6" : "pl-0"} list-none`}>
         {categories.map((category) => (
@@ -276,6 +327,11 @@ export default function CategoriesManagement() {
                   {category.description}
                 </div>
                 <div className="text-sm text-gray-500">{category.slug}</div>
+                {category.imageBillboard && (
+                  <div className="text-sm text-blue-500">
+                    Billboard: {category.imageBillboard}
+                  </div>
+                )}
               </div>
               <div className="flex space-x-2">
                 <Button
@@ -288,7 +344,13 @@ export default function CategoriesManagement() {
                   variant="outline"
                   disabled={category.children && category.children.length > 0}
                   size="sm"
-                  onClick={() => handleDeleteCategory(category.id ?? 0)}>
+                  onClick={() => {
+                    if (
+                      window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")
+                    ) {
+                      onDeleteCategory(category.id);
+                    }
+                  }}>
                   <Trash2 className="h-4 w-4 mr-1" /> Xóa
                 </Button>
               </div>
@@ -358,6 +420,18 @@ export default function CategoriesManagement() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="imageBillboard" className="text-right">
+                    Billboard
+                  </Label>
+                  <Input
+                    id="imageBillboard"
+                    value={imageBillboard}
+                    onChange={(e) => setImageBillboard(e.target.value)}
+                    className="col-span-3"
+                    placeholder="URL hình ảnh billboard"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="parent" className="text-right">
                     Danh mục
                   </Label>
@@ -370,7 +444,7 @@ export default function CategoriesManagement() {
                       {categories.map((cat) => (
                         <SelectItem
                           key={cat.id}
-                          value={cat.id!.toString()}
+                          value={cat.id.toString()}
                           disabled={editingCategoryId === cat.id}>
                           {cat.name}
                         </SelectItem>
