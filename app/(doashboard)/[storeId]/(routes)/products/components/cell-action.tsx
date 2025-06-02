@@ -5,7 +5,6 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { ProductColumn } from "./column";
 import {
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -18,9 +17,10 @@ import { useState } from "react";
 import axios from "axios";
 import { AlertModal } from "@/components/modals/alert-modal";
 import ActionDropdown from "@/components/action-dropdown";
+import { ProductInterface } from "@/types/product";
 
 interface CellActionProps {
-  data: ProductColumn;
+  data: ProductInterface;
 }
 export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const router = useRouter();
@@ -30,11 +30,10 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const [open, setOpen] = useState(false);
 
   const onCopy = () => {
-    navigator.clipboard.writeText(data.id);
+    navigator.clipboard.writeText(data.id.toString() );
     toast.success("Copy Category ID Thành Công");
   };
   const onEdit = () => {
-
     router.push(`/${params.storeId}/products/${data.slug}`);
   };
   const onDelete = async () => {
@@ -73,8 +72,6 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
         onOpenDeleteModal={() => setOpen(true)}
         
         />
-
-        
 
 
     </>

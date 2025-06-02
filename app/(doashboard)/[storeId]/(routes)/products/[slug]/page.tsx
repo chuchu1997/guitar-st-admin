@@ -7,30 +7,20 @@ import ProductAPI from "@/app/api/products/products.api";
 import { useEffect, useState } from "react";
 import { ProductInterface } from "@/types/product";
 
-interface ProductPageProps {
-  params: Promise<{ slug: string; storeId: string }>;
-}
+
 
 const ProductPage =  () => {
-
   const {storeId,slug} = useParams();
   const [productData,setProductData] = useState<ProductInterface |null>(null);
-
-  console.log("STORE ID",storeId);
-  console.log("slug",slug)
     useEffect(()=>{
       getProductBySlug();
   },[])
   const getProductBySlug = async ()=>{
     if(slug){
        const response = await ProductAPI.getProductBySlug(slug.toString())
-       console.log("response",response)
        if(response.status === 200){
         const {product} = response.data as {product:ProductInterface}
-      
         setProductData(product)
-     
-
 
        }
     }

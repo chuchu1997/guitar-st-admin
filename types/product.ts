@@ -37,7 +37,9 @@ export interface ProductInterface extends ProductBase{
     id:number;
 
 };
+export interface CreateProductInterface extends Partial<Omit<ProductBase, 'createdAt' | 'updatedAt' | 'orderItems' | 'reviews'>> {
 
-export interface CreateProductInterface extends Omit<Partial<ProductBase>, 'createdAt'|'updatedAt'>{
-};
-export interface UpdateProductInterface extends Partial<Omit<ProductInterface, 'id'>> {}
+}
+export interface UpdateProductInterface extends Partial<ProductBase> {
+  id: number;
+}

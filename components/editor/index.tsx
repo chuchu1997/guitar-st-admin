@@ -2,140 +2,97 @@
 
 "use client";
 
-import {
-  LexicalComposer,
-  InitialConfigType,
-} from "@lexical/react/LexicalComposer";
-import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { ListNode, ListItemNode } from "@lexical/list";
-import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import { ContentEditable } from "@lexical/react/LexicalContentEditable";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
-import { ListPlugin } from "@lexical/react/LexicalListPlugin";
-import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
-import { CodeNode, CodeHighlightNode } from "@lexical/code";
-import { AutoLinkNode, LinkNode } from "@lexical/link";
-import InitialEditorState from "@/lib/editor-state.json";
-import ToolbarPlugins from "@/components/editor/plugins/toolbar-plugins";
-import { Button } from "@/components/ui/button";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $getRoot } from "lexical";
-import { useCallback, useEffect, useState } from "react";
-import EmojisPlugin from "./plugins/EmojisPlugin";
-import { EmojiNode } from "./nodes/EmojiNode";
-import { InlineImageNode } from "./nodes/InlineImageNode";
-import { InlineImagePlugin } from "./plugins/InlineImagePlugin";
-// ✅ Child component to read editor content
-import LinkPlugin from "./plugins/LinkPlugin";
-import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
-import LinkEditor from "./plugins/LinkEditor";
-import { PreventLinkOpenPlugin } from "./plugins/PreventLinkPlugin";
-import LoadEditorStatePlugin from "./plugins/LoadStatePlugin";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
+import { TRANSFORMERS } from "@lexical/markdown";
+import { useEffect, useState } from "react";
+
+// Config
+import { editorConfig } from "./config/editor-config";
+
+// Components
 import RichTextWrapper from "./editor-wrapper";
+
+// Plugins
+import {
+  HistoryPlugin,
+  ListPlugin,
+  MarkdownShortcutPlugin,
+  ClickableLinkPlugin,
+  ToolbarPlugins,
+  EmojisPlugin,
+  InlineImagePlugin,
+  LinkPlugin,
+  LinkEditor,
+  PreventLinkOpenPlugin,
+} from "./plugins";
 
 interface EditorInterface {
   value?: string; // serialized JSON string
   onChange?: (content: string) => void;
+  placeholder?: string;
+  minHeight?: string;
+  maxHeight?: string;
+  className?: string;
 }
 
-const EditorComponent: React.FC<EditorInterface> = ({ value, onChange }) => {
-  // const SaveButton = () => {
-  //   const [editor] = useLexicalComposerContext();
-  //   const handleClick = useCallback(() => {
-  //     editor.update(async () => {
-  //       const editorState = editor.getEditorState();
-  //       const serialized = editorState.toJSON();
-  //       const saveJSONString = JSON.stringify(serialized, null, 2);
-  //       onSave(saveJSONString);
-  //     });
-  //   }, [editor]);
-
-  //   return (
-  //     <div className="px-8 pb-4">
-  //       <Button onClick={handleClick}>Lưu Nội Dung </Button>
-  //     </div>
-  //   );
-  // };
-
-  const config: InitialConfigType = {
-    namespace: "lexical-editor",
-
-    theme: {
-      text: {
-        underline: "underline",
-        italic: "italic",
-        bold: "font-bold",
-      },
-      heading: {
-        h1: "text-3xl font-bold",
-        h2: "text-2xl font-semibold",
-        h3: "text-xl font-semibold",
-        h4: "text-lg font-medium",
-        h5: "text-base font-medium",
-        h6: "text-sm font-medium",
-      },
-      paragraph: "text-base", // optional
-      quote: "pl-4 border-l-4 border-gray-300 italic text-gray-600", // optional
-      list: {
-        ul: "list-disc pl-5",
-        ol: "list-decimal pl-5",
-        listitem: "mb-1",
-      },
-      link: "text-blue-600 underline cursor-pointer",
-    },
-
-    nodes: [
-      HeadingNode,
-      QuoteNode,
-      ListNode,
-      ListItemNode,
-      LinkNode,
-      CodeNode,
-      CodeHighlightNode,
-      AutoLinkNode,
-      LinkNode,
-      EmojiNode,
-      InlineImageNode,
-    ],
-
-    // editorState: JSON.stringify(InitialEditorState),
-
-    onError: (error) => {
-      console.error(error);
-    },
-  };
+const EditorComponent: React.FC<EditorInterface> = ({
+  value,
+  onChange,
+  placeholder = "Bắt đầu viết...",
+  minHeight = "200px",
+  maxHeight = "400px",
+  className = "",
+}) => {
   const [mounted, setMounted] = useState(false);
-  // Handle hydration issues
+
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  if (!mounted) {
+    return (
+      <div
+        className={`animate-pulse border border-gray-200 dark:border-gray-700 rounded-xl h-64 bg-gray-50 dark:bg-gray-800 ${className}`}>
+        <div className="h-12 bg-gray-100 dark:bg-gray-700 rounded-t-xl"></div>
+        <div className="p-4 space-y-3">
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+          <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-5/6"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <LexicalComposer initialConfig={config}>
-      <div className="mx-auto relative prose dark:prose-invert flex flex-col mt-10 border shadow rounded-lg">
+    <LexicalComposer initialConfig={editorConfig}>
+      <div
+        className={`mx-auto relative flex flex-col border border-gray-200 dark:border-gray-700 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-gray-900 ${className}`}>
         {/* Toolbar */}
         <ToolbarPlugins />
-        <div className="relative">
-          {/* THIS IS CUSTOM RICH TEXT */}
-          <RichTextWrapper onChange={onChange} value={value} />
-          {/* THIS IS CUSTOM RICH TEXT */}
 
+        {/* Editor Content */}
+        <div className="relative flex-1">
+          <RichTextWrapper
+            onChange={onChange}
+            value={value}
+            placeholder={placeholder}
+            minHeight={minHeight}
+            maxHeight={maxHeight}
+          />
+
+          {/* Core Plugins */}
           <HistoryPlugin />
+          <ListPlugin />
+          <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+
+          {/* Custom Plugins */}
+          <InlineImagePlugin />
+          <LinkPlugin />
+          <EmojisPlugin />
+          <ClickableLinkPlugin />
+          <LinkEditor />
+          <PreventLinkOpenPlugin />
         </div>
-        <InlineImagePlugin />
-        <ListPlugin />
-        <LinkPlugin />
-        <EmojisPlugin />
-        <ClickableLinkPlugin />
-        <LinkEditor /> {/* Custom component để chỉnh sửa link */}
-        <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
-        {/* ✅ Save button inside LexicalComposer */}
-        {/* {initialEditorState && (
-          <LoadEditorStatePlugin initialEditorState={initialEditorState} />
-        )}
-        <SaveButton /> */}
       </div>
     </LexicalComposer>
   );

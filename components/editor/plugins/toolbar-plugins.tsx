@@ -1,271 +1,323 @@
 /** @format */
 
 "use client";
-import { useCallback, useEffect, useState } from "react";
+
+import { useLayoutEffect, useRef, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { Toggle } from "@/components/ui/toggle";
 import {
-  BoldIcon,
-  ItalicIcon,
-  UnderlineIcon,
-  Loader2Icon,
-  LinkIcon,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Quote,
+  Code,
+  Link,
+  Type,
+  Heading1,
+  Heading2,
+  Heading3,
+  Undo,
+  Redo,
+  Smile,
+  CameraIcon,
 } from "lucide-react";
 import {
   $getSelection,
   $isRangeSelection,
-  $isRootOrShadowRoot,
   FORMAT_TEXT_COMMAND,
-  SELECTION_CHANGE_COMMAND,
-  COMMAND_PRIORITY_CRITICAL,
-  CAN_REDO_COMMAND,
-  CAN_UNDO_COMMAND,
   UNDO_COMMAND,
   REDO_COMMAND,
-  RangeSelection,
+  $createParagraphNode,
+  $getRoot,
+  TextFormatType,
 } from "lexical";
-import { $isHeadingNode } from "@lexical/rich-text";
-import { $isLinkNode, TOGGLE_LINK_COMMAND } from "@lexical/link";
-
-import { $isListNode, ListNode } from "@lexical/list";
-
 import {
-  $findMatchingParent,
-  $getNearestNodeOfType,
-  mergeRegister,
-} from "@lexical/utils";
-import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
-import BlockTypeDropdown from "./components/block-type-dropdown";
-import { blockTypeToBlockName } from "./components/block-types";
-import { getSelectedNode } from "@/utils/getSelectedNode";
-import { sanitizeUrl } from "@/utils/url";
-import { INSERT_INLINE_IMAGE_COMMAND } from "./InlineImagePlugin";
-import LinkInputDialog from "@/components/modals/link-input-modal";
+  INSERT_UNORDERED_LIST_COMMAND,
+  INSERT_ORDERED_LIST_COMMAND,
+  REMOVE_LIST_COMMAND,
+  $isListNode,
+} from "@lexical/list";
+import { $createQuoteNode } from "@lexical/rich-text";
+import { $setBlocksType } from "@lexical/selection";
+import { $createHeadingNode, $isHeadingNode } from "@lexical/rich-text";
+import { createEmptyHistoryState } from "@lexical/history";
 import ImagePickerDialog from "@/components/modals/image-picker";
+import { INSERT_INLINE_IMAGE_COMMAND } from "./InlineImagePlugin";
+
+const ToolbarButton = ({
+  onClick,
+  isActive = false,
+  disabled = false,
+  children,
+  title,
+}: {
+  onClick: () => void;
+  isActive?: boolean;
+  disabled?: boolean;
+  children: React.ReactNode;
+  title: string;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    title={title}
+    className={`
+      p-2 rounded-lg transition-all duration-200 flex items-center justify-center min-w-[36px] h-9
+      ${
+        isActive
+          ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 shadow-sm"
+          : "hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+      }
+      ${
+        disabled
+          ? "opacity-50 cursor-not-allowed"
+          : "hover:text-gray-900 dark:hover:text-gray-200"
+      }
+    `}>
+    {children}
+  </button>
+);
+
+const ToolbarDivider = () => (
+  <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+);
 
 const ToolbarPlugins = () => {
   const [editor] = useLexicalComposerContext();
-  const [isBold, setIsBold] = useState<boolean>(false);
-  const [isItalic, setIsItalic] = useState<boolean>(false);
-  const [isUnderline, setIsUnderline] = useState<boolean>(false);
-
-  const [canUndo, setCanUndo] = useState<boolean>(false);
-  const [canRedo, setCanRedo] = useState<boolean>(false);
-  const [isLink, setIsLink] = useState<boolean>(false);
-  const [isOpenLinkDialog, setOpenLinkDialog] = useState(false);
-
+  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
+  const [blockType, setBlockType] = useState<string>("paragraph");
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const [historyState] = useState(() => createEmptyHistoryState());
   const [isImageDialogOpen, setImageDialogOpen] = useState(false);
-
   const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
 
-  const [blockType, setBlockType] =
-    useState<keyof typeof blockTypeToBlockName>("paragraph");
+  useEffect(() => {
+    return editor.registerUpdateListener(({ editorState }) => {
+      editorState.read(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          // Text formats
+          const formats = new Set<string>();
+          if (selection.hasFormat("bold")) formats.add("bold");
+          if (selection.hasFormat("italic")) formats.add("italic");
+          if (selection.hasFormat("underline")) formats.add("underline");
+          if (selection.hasFormat("code")) formats.add("code");
+          setActiveFormats(formats);
 
-  const $updateToolbar = useCallback(() => {
-    const selection = $getSelection();
+          // Block type
+          const anchorNode = selection.anchor.getNode();
+          const element =
+            anchorNode.getKey() === "root"
+              ? anchorNode
+              : anchorNode.getTopLevelElementOrThrow();
 
-    if ($isRangeSelection(selection)) {
-      setIsBold(selection.hasFormat("bold"));
-      setIsItalic(selection.hasFormat("italic"));
-      setIsUnderline(selection.hasFormat("underline"));
-
-      const anchorNode = selection.anchor.getNode();
-      let element =
-        anchorNode.getKey() === "root"
-          ? anchorNode
-          : $findMatchingParent(anchorNode, (e) => {
-              const parent = e.getParent();
-              return parent !== null && $isRootOrShadowRoot(parent);
-            }) ?? anchorNode.getTopLevelElementOrThrow();
-
-      const node = getSelectedNode(selection);
-      const parent = node.getParent();
-      setIsLink($isLinkNode(parent) || $isLinkNode(node));
-
-      const elementDOM = editor.getElementByKey(element.getKey());
-      if (elementDOM !== null) {
-        if ($isListNode(element)) {
-          const parentList = $getNearestNodeOfType<ListNode>(
-            anchorNode,
-            ListNode
-          );
-          const type = parentList
-            ? parentList.getListType()
-            : element.getListType();
-          setBlockType(type);
-        } else if ($isHeadingNode(element)) {
-          const tag = element.getTag(); // h1, h2, ...
-          setBlockType(tag as keyof typeof blockTypeToBlockName);
-        } else {
-          const type = element.getType(); // paragraph, quote
-          if (type in blockTypeToBlockName) {
-            setBlockType(type as keyof typeof blockTypeToBlockName);
+          if ($isHeadingNode(element)) {
+            setBlockType(element.getTag());
+          } else if ($isListNode(element)) {
+            setBlockType(element.getListType() === "bullet" ? "ul" : "ol");
           } else {
-            setBlockType("paragraph");
+            setBlockType(element.getType());
           }
         }
+      });
+    });
+  }, [editor]);
+
+  useEffect(() => {
+    const updateToolbar = () => {
+      setCanUndo(historyState.undoStack.length > 0);
+      setCanRedo(historyState.redoStack.length > 0);
+    };
+
+    const unregisterListener = editor.registerUpdateListener(updateToolbar);
+    updateToolbar();
+
+    return unregisterListener;
+  }, [editor, historyState]);
+
+  const formatText = (format: TextFormatType) => {
+    editor.dispatchCommand(FORMAT_TEXT_COMMAND, format);
+  };
+
+  const formatHeading = (headingSize: "h1" | "h2" | "h3") => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        $setBlocksType(selection, () => $createHeadingNode(headingSize));
       }
+    });
+  };
+
+  const formatParagraph = () => {
+    editor.update(() => {
+      const selection = $getSelection();
+      if ($isRangeSelection(selection)) {
+        $setBlocksType(selection, () => $createParagraphNode());
+      }
+    });
+  };
+
+  const insertList = (type: "bullet" | "number") => {
+    if (type === "bullet") {
+      editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
     } else {
-      // When no selection, reset state
-      setIsBold(false);
-      setIsItalic(false);
-      setIsUnderline(false);
-      setIsLink(false);
-      setBlockType("paragraph");
+      editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
     }
-  }, [editor]);
+  };
 
-  useEffect(() => {
-    return mergeRegister(
-      editor.registerCommand(
-        SELECTION_CHANGE_COMMAND,
-        () => {
-          $updateToolbar();
-          return false;
-        },
-        COMMAND_PRIORITY_CRITICAL
-      ),
-      editor.registerUpdateListener(({ editorState }) => {
-        editorState.read(() => {
-          $updateToolbar();
-        });
-      })
-    );
-  }, [editor, $updateToolbar]);
+  const formatQuote = () => {
+    if (blockType !== "quote") {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          $setBlocksType(selection, () => $createQuoteNode());
+        }
+      });
+    }
+  };
 
-  useEffect(() => {
-    return mergeRegister(
-      editor.registerCommand(
-        CAN_UNDO_COMMAND,
-        (payload) => {
-          setCanUndo(payload);
-          return false;
-        },
-        COMMAND_PRIORITY_CRITICAL
-      ),
-      editor.registerCommand(
-        CAN_REDO_COMMAND,
-        (payload) => {
-          setCanRedo(payload);
-          return false;
-        },
-        COMMAND_PRIORITY_CRITICAL
-      )
-    );
-  }, [editor]);
+  const undo = () => {
+    editor.dispatchCommand(UNDO_COMMAND, undefined);
+  };
+
+  const redo = () => {
+    editor.dispatchCommand(REDO_COMMAND, undefined);
+  };
 
   return (
-    <div className="w-full p-1 border-b z-10">
-      <div className="flex space-x-2 justify-center">
-        <Button
-          className="h-8 px-2"
-          variant={"ghost"}
-          type="button"
+    <div className="flex items-center gap-1 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-lg">
+      {/* History */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton
+          onClick={undo}
           disabled={!canUndo}
-          onClick={() => editor.dispatchCommand(UNDO_COMMAND, undefined)}>
-          {/* reload flip to left */}
-          <Loader2Icon className="transform -scale-x-100" />
-        </Button>
-
-        <Button
-          className="h-8 px-2"
-          variant={"ghost"}
-          type="button"
+          title="Hoàn tác (Ctrl+Z)">
+          <Undo className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={redo}
           disabled={!canRedo}
-          onClick={() => editor.dispatchCommand(REDO_COMMAND, undefined)}>
-          <Loader2Icon />
-        </Button>
-        <Separator orientation="vertical" className="h-auto my-1" />
-
-        <Toggle
-          area-label="Bold"
-          size="sm"
-          pressed={isBold}
-          onPressedChange={(pressed) => {
-            editor.dispatchCommand(FORMAT_TEXT_COMMAND, "bold");
-            setIsBold(pressed);
-          }}>
-          <BoldIcon />
-        </Toggle>
-
-        <Toggle
-          area-label="Italic"
-          size="sm"
-          pressed={isItalic}
-          onPressedChange={(pressed) => {
-            editor.dispatchCommand(FORMAT_TEXT_COMMAND, "italic");
-            setIsItalic(pressed);
-          }}>
-          <ItalicIcon />
-        </Toggle>
-
-        <Toggle
-          area-label="Underline"
-          size="sm"
-          pressed={isUnderline}
-          onPressedChange={(pressed) => {
-            editor.dispatchCommand(FORMAT_TEXT_COMMAND, "underline");
-            setIsUnderline(pressed);
-          }}>
-          <UnderlineIcon />
-        </Toggle>
-
-        <Toggle
-          area-label="Link"
-          size="sm"
-          pressed={isLink}
-          onPressedChange={() => {
-            if (!isLink) {
-              setOpenLinkDialog(true); // mở dialog nhập link
-            } else {
-              editor.dispatchCommand(TOGGLE_LINK_COMMAND, null);
-            }
-          }}>
-          <LinkIcon />
-        </Toggle>
-
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setImageDialogOpen(true);
-          }}>
-          📷 Insert Image
-        </Button>
-
-        <BlockTypeDropdown
-          blockType={blockType}
-          onUpdate={() => {
-            editor.getEditorState().read(() => {
-              $updateToolbar();
-            });
-          }}
-        />
-
-        <LinkInputDialog
-          open={isOpenLinkDialog}
-          onClose={() => setOpenLinkDialog(false)}
-          onConfirm={(url) => {
-            editor.dispatchCommand(TOGGLE_LINK_COMMAND, {
-              url: sanitizeUrl(url),
-              target: "_blank",
-            });
-          }}
-        />
-
-        <ImagePickerDialog
-          open={isImageDialogOpen}
-          onClose={() => setImageDialogOpen(false)}
-          onInsert={(url, position) => {
-            editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, {
-              url,
-              position,
-            });
-          }}
-        />
+          title="Làm lại (Ctrl+Y)">
+          <Redo className="w-4 h-4" />
+        </ToolbarButton>
       </div>
+
+      <ToolbarDivider />
+
+      {/* Block Types */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton
+          onClick={formatParagraph}
+          isActive={blockType === "paragraph"}
+          title="Đoạn văn">
+          <Type className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatHeading("h1")}
+          isActive={blockType === "h1"}
+          title="Tiêu đề 1">
+          <Heading1 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatHeading("h2")}
+          isActive={blockType === "h2"}
+          title="Tiêu đề 2">
+          <Heading2 className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatHeading("h3")}
+          isActive={blockType === "h3"}
+          title="Tiêu đề 3">
+          <Heading3 className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
+
+      <ToolbarDivider />
+
+      {/* Text Formatting */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton
+          onClick={() => formatText("bold")}
+          isActive={activeFormats.has("bold")}
+          title="Đậm (Ctrl+B)">
+          <Bold className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatText("italic")}
+          isActive={activeFormats.has("italic")}
+          title="Nghiêng (Ctrl+I)">
+          <Italic className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatText("underline")}
+          isActive={activeFormats.has("underline")}
+          title="Gạch chân (Ctrl+U)">
+          <Underline className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => formatText("code")}
+          isActive={activeFormats.has("code")}
+          title="Code (Ctrl+`)">
+          <Code className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
+
+      <ToolbarDivider />
+
+      {/* Lists & Blocks */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton
+          onClick={() => insertList("bullet")}
+          isActive={blockType === "ul"}
+          title="Danh sách dấu đầu dòng">
+          <List className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => insertList("number")}
+          isActive={blockType === "ol"}
+          title="Danh sách đánh số">
+          <ListOrdered className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={formatQuote}
+          isActive={blockType === "quote"}
+          title="Trích dẫn">
+          <Quote className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
+
+      <ToolbarDivider />
+
+      {/* Special */}
+      <div className="flex items-center gap-1">
+        <ToolbarButton
+          onClick={() => {
+            /* Handle emoji picker */
+          }}
+          title="Emoji">
+          <Smile className="w-4 h-4" />
+        </ToolbarButton>
+        <ToolbarButton
+          onClick={() => {
+            /* Handle emoji picker */
+          }}
+          title="📷 Thêm hình ảnh">
+          <CameraIcon className="w-4 h-4" />
+        </ToolbarButton>
+      </div>
+      <ImagePickerDialog
+        open={isImageDialogOpen}
+        onClose={() => setImageDialogOpen(false)}
+        onInsert={(url, position) => {
+          editor.dispatchCommand(INSERT_INLINE_IMAGE_COMMAND, {
+            url,
+            position,
+          });
+        }}
+      />
     </div>
   );
 };

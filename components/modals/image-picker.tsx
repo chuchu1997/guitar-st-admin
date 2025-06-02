@@ -1,9 +1,18 @@
+/** @format */
+
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useRef, useState } from "react";
 import axios from "axios";
+import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import { ImageInterface } from "@/types/product";
 
 export default function ImagePickerDialog({
   open,
@@ -26,29 +35,21 @@ export default function ImagePickerDialog({
     //   body: formData,
     // });
 
-    const res = await axios.post("/api/upload", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    return res.data.imageUrl[0];
-
-
-
-    
-
-  }
-  const handleFileChange =async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const res = await S3CloudAPI.uploadImageToS3(formData);
+    if (res.status === 200) {
+      const { imageUrls } = res.data;
+      return imageUrls[0];
+    }
+  };
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
 
     if (file) {
-
-     let data =  await uploadImageToCloudinary(file)
-     if(data){
-      setPreviewUrl(data);
-      /////TODO:
-     }
+      let data = await uploadImageToCloudinary(file);
+      if (data) {
+        setPreviewUrl(data);
+        /////TODO:
+      }
       // const reader = new FileReader();
       // reader.onload = () => {
       //   setPreviewUrl(reader.result as string);
@@ -73,7 +74,7 @@ export default function ImagePickerDialog({
         <DialogHeader>
           <DialogTitle>Chèn hình ảnh</DialogTitle>
         </DialogHeader>
-      
+
         <input
           ref={fileInputRef}
           type="file"

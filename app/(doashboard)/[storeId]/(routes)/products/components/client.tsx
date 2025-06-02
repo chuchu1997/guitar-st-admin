@@ -26,7 +26,6 @@ export const ProductClient = () => {
         storeID: parseInt(storeId.toString()),
       });
       if (response.status === 200) {
-        console.log("RESPONSE DATA", response.data);
         const { products, total } = response.data as {
           products: ProductInterface[];
           total: number;

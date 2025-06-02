@@ -26,16 +26,15 @@ export default function DashboardLayout(props: LayoutProps) {
   const { storeId } = useParams();
 
   useEffect(() => {
+    console.log("CALL AUTH DASHBOARD");
     if (calledRef.current) return;
     calledRef.current = true;
     const checkAuth = async () => {
       console.log("📡 Gọi authApi.getUserProfile");
       const response = await authApi.getUserProfile();
       const { user } = response.data;
-
       if (user && user.role === Role.ADMIN) {
         const response = await StoresAPI.getStoresByUserID(user.sub);
-
         if (response.status === 200) {
           const { stores } = response.data;
           if (!stores) {

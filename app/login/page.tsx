@@ -45,11 +45,19 @@ const LoginPage = () => {
   });
   useEffect(() => {
     const token = localStorage.getItem("access_token");
+
     if (token) {
-      router.replace("/"); // nhanh và không lưu vào history stack
+      console.log("TOKEN CALL", token);
+      // if (window.location.pathname !== "/") {
+      //   router.replace("/");
+      // }
     } else {
-      setCheckingAuth(false); // Chỉ render giao diện khi chưa login
+      setCheckingAuth(false);
     }
+
+    //  else {
+    //   setCheckingAuth(false); // Chỉ render giao diện khi chưa login
+    // }
   }, []);
 
   if (checkingAuth) {
@@ -64,6 +72,7 @@ const LoginPage = () => {
 
       if (response.status === 200) {
         const { accessToken, message } = response.data;
+
         AuthStorage.setToken(accessToken);
         toast.success(message, {
           duration: 1000,

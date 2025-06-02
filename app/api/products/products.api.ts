@@ -1,3 +1,4 @@
+import { CreateProductInterface, UpdateProductInterface } from "@/types/product";
 import api from "../interceptor"
 const url = "/products"
 
@@ -33,6 +34,20 @@ const ProductAPI = {
             method:"GET",
             url:`${url}/${slug}`
 
+        })
+    },
+    createProduct:async(data:CreateProductInterface)=>{
+        return await api({
+            method:"POST",
+            url:`${url}`,
+            data:data
+        })
+    },
+    updateProduct:async(data:UpdateProductInterface)=>{
+           return await api({
+            method:"PATCH",
+            url:`${url}/${data.id}`,
+            data:data
         })
     }
 }

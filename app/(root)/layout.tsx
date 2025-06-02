@@ -28,7 +28,6 @@ export default function SetupLayout({
 
   const getUserByToken = async () => {
     const responseAuth = await authApi.getUserProfile();
-
     if (responseAuth.status === 200) {
       const { user } = responseAuth.data;
       if (user && user.role === Role.ADMIN) {
@@ -46,8 +45,8 @@ export default function SetupLayout({
     }
   };
   useEffect(() => {
-    getUserByToken();
     checkAuthForAdmin();
+    getUserByToken();
   }, []);
 
   const checkAuthForAdmin = () => {

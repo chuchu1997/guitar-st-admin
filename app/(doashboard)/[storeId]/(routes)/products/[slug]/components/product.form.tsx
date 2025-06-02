@@ -40,7 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ImageUpload from "@/components/ui/image-upload";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,20 +48,29 @@ import EditorComponent from "@/components/editor";
 import { ImageInterface, ProductInterface } from "@/types/product";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import CategoryAPI from "@/app/api/categories/categories.api";
+import { CategoryInterface } from "@/types/categories";
+import { IM_Fell_English } from "next/font/google";
+import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import ProductAPI from "@/app/api/products/products.api";
 
 const formSchema = z.object({
   name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
   categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
   price: z.coerce.number().min(1, "Giá phải lớn hơn 0"),
   images: z
-    .object({ url: z.string() })
-    .array()
-    .min(1, "Cần ít nhất 1 hình ảnh"),
+    .array(
+      z.object({
+        url: z.string(),
+        file: z.instanceof(File),
+      })
+    )
+    .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
   isFeatured: z.boolean().default(false).optional(),
   description: z.string().min(1, "Mô tả sản phẩm là bắt buộc"),
   slug: z.string().min(1, "Slug là bắt buộc"),
   sku: z.string().min(1, "SKU là bắt buộc"),
-  stockQuantity: z.coerce.number().min(0, "Số lượng không được âm"),
+  stock: z.coerce.number().min(0, "Số lượng không được âm"),
   // Required colors selection
   colors: z
     .array(
@@ -71,7 +80,7 @@ const formSchema = z.object({
         stockQuantity: z.coerce.number().min(0),
       })
     )
-    .min(1, "Vui lòng chọn ít nhất 1 màu sắc"),
+    .optional(),
   // Optional sizes
   sizes: z
     .array(
@@ -126,8 +135,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const [showSizes, setShowSizes] = useState(false);
   const [showColors, setShowColors] = useState(false);
   const [categories, setCategories] = useState(false);
+  const editorRef = useRef<HTMLDivElement>(null); // hoặc ref đúng với Editor bạn dùng
 
   const params = useParams();
+  const { storeId } = params;
+
   const router = useRouter();
   const title = initialData ? "Chỉnh sửa sản phẩm" : "Tạo sản phẩm mới";
   const description = initialData
@@ -149,33 +161,68 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       description: initialData?.description || "",
       slug: initialData?.slug || "",
       sku: initialData?.sku || "",
-      stockQuantity: initialData?.stock || 0,
+      stock: initialData?.stock || 0,
       colors: initialData?.colors || [],
       sizes: initialData?.sizes || [],
       viewCount: initialData?.viewCount || 0,
       ratingCount: initialData?.ratingCount || 5,
     },
   });
-
+  useEffect(() => {
+    if (showEditor && editorRef.current) {
+      // Focus vào editor sau khi hiển thị
+      setTimeout(() => {
+        editorRef.current?.focus();
+      }, 0); // dùng setTimeout để đảm bảo DOM đã render xong
+    }
+  }, [showEditor]);
   const onSubmit = async (data: ProductFormValues) => {
     try {
       setLoading(true);
 
-      if (initialData) {
-        await axios.patch(
-          `/api/${params.storeId}/products/${params.slug}`,
-          data
-        );
-      } else {
-        await axios.post(`/api/${params.storeId}/products`, data);
-      }
+      // Upload ảnh lên S3
+      const formData = new FormData();
+      data.images.forEach((img) => formData.append("files", img.file));
+      const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
 
-      router.refresh();
-      router.push(`/${params.storeId}/products/`);
-      toast.success(toastMessage);
-    } catch (error) {
+      if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+
+      const { imageUrls } = uploadRes.data as { imageUrls: ImageInterface[] };
+      const {
+        name,
+        description,
+        price,
+        isFeatured = false,
+        slug,
+        stock,
+        sku,
+        categoryId,
+      } = data;
+
+      const payload = {
+        name,
+        description,
+        price,
+        isFeatured,
+        slug,
+        stock,
+        sku,
+        categoryId: Number(categoryId),
+        storeId: Number(storeId),
+        images: imageUrls,
+      };
+
+      const res = initialData
+        ? await ProductAPI.updateProduct({ ...payload, id: initialData.id })
+        : await ProductAPI.createProduct(payload);
+
+      if (res.status === 200) {
+        const { message } = res.data as { message: string };
+        toast.success(message);
+        router.push(`/${storeId}/products/`);
+      }
+    } catch (err) {
       toast.error("Có lỗi xảy ra, vui lòng thử lại!");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -257,8 +304,27 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
   useEffect(() => {
     setIsMounted(true);
+
+    fetchCategoriesFromSV();
   }, []);
-  const fetchCategoriesFromSV = () => {};
+  const fetchCategoriesFromSV = async () => {
+    let response = await CategoryAPI.getCategoriesRelateWithStoreID({
+      justGetParent: false,
+      storeID: Number(storeId),
+    });
+    if (response.status === 200) {
+      const { categories } = response.data as {
+        categories: CategoryInterface[];
+      };
+      if (categories.length <= 0) {
+        const toastId = toast.error("Chưa có danh mục để tạo sản phẩm");
+        setTimeout(() => {
+          toast.dismiss(toastId); // Đảm bảo toast biến mất trước khi đi
+          router.push(`/${storeId}/categories`);
+        }, 3000);
+      }
+    }
+  };
 
   if (!isMounted) return null;
 
@@ -314,17 +380,26 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
                   <FormItem>
                     <FormControl>
                       <ImageUpload
-                        isMultiple={true}
+                        isMultiple
                         disabled={loading}
-                        onChange={(url) => {
-                          field.onChange([...field.value, { url }]);
+                        value={field.value!.map((img) => ({
+                          file: img.file, // giữ nguyên file thật
+                          url: img.url,
+                        }))}
+                        onChange={(images) => {
+                          field.onChange(
+                            images.map((img) => ({
+                              file: img.file, // giữ nguyên File gốc
+                              url: img.url,
+                            }))
+                          );
+                          console.log("IMAGES", field.value);
                         }}
                         onRemove={(url) =>
                           field.onChange(
-                            field.value.filter((current) => current.url !== url)
+                            field.value!.filter((img) => img.url !== url)
                           )
                         }
-                        value={field.value.map((image) => image.url)}
                       />
                     </FormControl>
                     <FormMessage />
@@ -455,7 +530,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
               <FormField
                 control={form.control}
-                name="stockQuantity"
+                name="stock"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Số lượng tồn kho</FormLabel>
@@ -819,7 +894,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
             <Button
               type="submit"
               disabled={loading}
-              className="min-w-[150px]"
+              className="min-w-[150px] cursor-pointer"
               size="lg">
               {loading ? "Đang xử lý..." : action}
             </Button>
