@@ -5,7 +5,6 @@ import { ModalProvider } from "@/providers/modal-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 
 import { ToastProvider } from "@/providers/toast-provider";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

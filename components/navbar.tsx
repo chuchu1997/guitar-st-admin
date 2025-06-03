@@ -61,6 +61,7 @@ const Navbar = () => {
         <div className="flex h-16 items-center justify-between px-4">
           <div className="flex gap-x-4">
             {/* <SidebarTrigger /> */}
+            <SidebarTrigger />
             <StoreSwitcher items={stores} />
           </div>
         </div>
