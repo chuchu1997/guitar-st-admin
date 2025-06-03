@@ -303,6 +303,7 @@ const ToolbarPlugins = () => {
         <ToolbarButton
           onClick={() => {
             /* Handle emoji picker */
+            setImageDialogOpen(true);
           }}
           title="📷 Thêm hình ảnh">
           <CameraIcon className="w-4 h-4" />

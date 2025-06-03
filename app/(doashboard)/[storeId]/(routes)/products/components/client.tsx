@@ -23,6 +23,7 @@ export const ProductClient = () => {
   const getListProductsRelateWithStoreID = async () => {
     if (storeId) {
       let response = await ProductAPI.getListProducts({
+        currentPage: 1,
         storeID: parseInt(storeId.toString()),
       });
       if (response.status === 200) {

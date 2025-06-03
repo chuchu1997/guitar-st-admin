@@ -11,31 +11,31 @@ import { ProductInterface } from "@/types/product";
 
 const ProductPage =  () => {
   const {storeId,slug} = useParams();
+  
   const [productData,setProductData] = useState<ProductInterface |null>(null);
     useEffect(()=>{
-      getProductBySlug();
-  },[])
+      if(slug){
+              getProductBySlug();
+      }
+  
+  },[slug])
   const getProductBySlug = async ()=>{
     if(slug){
        const response = await ProductAPI.getProductBySlug(slug.toString())
        if(response.status === 200){
         const {product} = response.data as {product:ProductInterface}
         setProductData(product)
-
+        console.log("SLUG",slug.toString())
+        console.log("PRODUCT DATA",product)
        }
     }
-   
   }
  
   return (
     <div className="flex">
       <div className="flex-1 space-y-4 p-8 pt-6">
-      
         <ProductForm
           initialData={productData}
-          // sizes={sizes}
-          // colors={colors}
-          // defaultCategoryId={defaultCategory?.id}
         />
       </div>
     </div>

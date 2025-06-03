@@ -62,7 +62,7 @@ const formSchema = z.object({
     .array(
       z.object({
         url: z.string(),
-        file: z.instanceof(File),
+        file: z.instanceof(File).optional(), // <- optional ở đây
       })
     )
     .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
@@ -96,12 +96,6 @@ const formSchema = z.object({
 });
 
 // Mock data - replace with your actual data fetching
-const mockCategories = [
-  { id: "1", name: "Áo thun", icon: "👕" },
-  { id: "2", name: "Quần jeans", icon: "👖" },
-  { id: "3", name: "Giày dép", icon: "👟" },
-  { id: "4", name: "Phụ kiện", icon: "🎒" },
-];
 
 const mockColors = [
   { id: "1", name: "Đen", value: "#000000" },
@@ -134,8 +128,9 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [showSizes, setShowSizes] = useState(false);
   const [showColors, setShowColors] = useState(false);
-  const [categories, setCategories] = useState(false);
+  const [categories, setCategories] = useState<CategoryInterface[]>([]);
   const editorRef = useRef<HTMLDivElement>(null); // hoặc ref đúng với Editor bạn dùng
+  const { register, reset } = useForm<ProductFormValues>();
 
   const params = useParams();
   const { storeId } = params;
@@ -153,21 +148,22 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: initialData?.name || "",
-      categoryId: initialData?.categoryId.toString() ?? "",
-      price: initialData?.price || 0,
-      images: initialData?.images || [],
-      isFeatured: initialData?.isFeatured || false,
-      description: initialData?.description || "",
-      slug: initialData?.slug || "",
-      sku: initialData?.sku || "",
-      stock: initialData?.stock || 0,
-      colors: initialData?.colors || [],
-      sizes: initialData?.sizes || [],
-      viewCount: initialData?.viewCount || 0,
-      ratingCount: initialData?.ratingCount || 5,
+      name: "",
+      categoryId: "",
+      price: 0,
+      images: [],
+      isFeatured: false,
+      description: "",
+      slug: "",
+      sku: "",
+      stock: 0,
+      colors: [],
+      sizes: [],
+      viewCount: 0,
+      ratingCount: 5,
     },
   });
+
   useEffect(() => {
     if (showEditor && editorRef.current) {
       // Focus vào editor sau khi hiển thị
@@ -181,13 +177,32 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       setLoading(true);
 
       // Upload ảnh lên S3
-      const formData = new FormData();
-      data.images.forEach((img) => formData.append("files", img.file));
-      const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
 
-      if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+      const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
+      const newImages = data.images.filter((img) => img.file); // Ảnh mới (có file cần upload)
+      let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
+      if (newImages.length > 0) {
+        const formData = new FormData();
 
-      const { imageUrls } = uploadRes.data as { imageUrls: ImageInterface[] };
+        newImages.forEach((img) => {
+          if (img.file) {
+            formData.append("files", img.file);
+          }
+        });
+
+        const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
+        if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+
+        const { imageUrls } = uploadRes.data as { imageUrls: [] };
+        const uploadedImageUrls: ImageInterface[] = imageUrls.map((img) => ({
+          url: img,
+          file: undefined,
+        }));
+
+        // Ghép ảnh mới vào danh sách cuối cùng
+        finalImageUrls = [...oldImages, ...uploadedImageUrls];
+      }
+
       const {
         name,
         description,
@@ -209,7 +224,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         sku,
         categoryId: Number(categoryId),
         storeId: Number(storeId),
-        images: imageUrls,
+        images: finalImageUrls,
       };
 
       const res = initialData
@@ -230,11 +245,15 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
   const onDelete = async () => {
     try {
-      setLoading(true);
-      await axios.delete(`/api/${params.storeId}/products/${params.slug}`);
-      router.refresh();
-      router.push(`/${params.storeId}/products/`);
-      toast.success("Sản phẩm đã được xóa thành công!");
+      if (initialData) {
+        setLoading(true);
+        let response = await ProductAPI.removeProduct(initialData.id);
+        if (response.status === 200) {
+          const { message } = response.data as { message: string };
+          toast.success(message);
+          router.push(`/${params.storeId}/products/`);
+        }
+      }
     } catch (error) {
       toast.error("Không thể xóa sản phẩm. Vui lòng thử lại!");
       console.error(error);
@@ -304,28 +323,56 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
   useEffect(() => {
     setIsMounted(true);
-
-    fetchCategoriesFromSV();
   }, []);
-  const fetchCategoriesFromSV = async () => {
-    let response = await CategoryAPI.getCategoriesRelateWithStoreID({
-      justGetParent: false,
-      storeID: Number(storeId),
-    });
-    if (response.status === 200) {
+
+  useEffect(() => {
+    console.log("CÓ GỌI");
+    fetchCategoriesAndResetForm(); // chỉ gọi khi có dữ liệu
+  }, [initialData]);
+
+  const fetchCategoriesAndResetForm = async () => {
+    setLoading(true);
+    try {
+      const response = await CategoryAPI.getCategoriesRelateWithStoreID({
+        justGetParent: false,
+        storeID: Number(storeId),
+      });
+
+      if (response.status !== 200) {
+        throw new Error("Lấy danh mục thất bại");
+      }
+
       const { categories } = response.data as {
         categories: CategoryInterface[];
       };
+      setCategories(categories);
+
       if (categories.length <= 0) {
         const toastId = toast.error("Chưa có danh mục để tạo sản phẩm");
         setTimeout(() => {
-          toast.dismiss(toastId); // Đảm bảo toast biến mất trước khi đi
+          toast.dismiss(toastId);
           router.push(`/${storeId}/categories`);
         }, 3000);
+        return; // thoát sớm nếu không có danh mục
       }
+
+      // Reset form sau khi có danh sách danh mục
+      if (initialData) {
+        const formData: ProductFormValues = {
+          ...initialData,
+          categoryId: initialData.categoryId.toString(),
+        };
+        setTimeout(() => {
+          form.reset(formData);
+        }, 500);
+      }
+    } catch (error) {
+      toast.error("Lỗi khi tải danh mục, vui lòng thử lại.");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
-
   if (!isMounted) return null;
 
   const selectedColors = form.watch("colors") || [];
@@ -382,8 +429,8 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
                       <ImageUpload
                         isMultiple
                         disabled={loading}
-                        value={field.value!.map((img) => ({
-                          file: img.file, // giữ nguyên file thật
+                        value={field.value.map((img) => ({
+                          file: img.file ? img.file : undefined,
                           url: img.url,
                         }))}
                         onChange={(images) => {
@@ -393,7 +440,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
                               url: img.url,
                             }))
                           );
-                          console.log("IMAGES", field.value);
                         }}
                         onRemove={(url) =>
                           field.onChange(
@@ -452,10 +498,12 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {mockCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
+                        {categories.map((category) => (
+                          <SelectItem
+                            key={category.id}
+                            value={category.id.toString()}>
                             <div className="flex items-center gap-2">
-                              <span>{category.icon}</span>
+                              <span>Hình ảnh Cate:</span>
                               {category.name}
                             </div>
                           </SelectItem>
@@ -550,44 +598,227 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           </Card>
 
           {/* Product Description */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Mô tả sản phẩm</CardTitle>
+          {/* Enhanced Product Description */}
+          <Card className="overflow-hidden shadow-sm border-0 bg-gradient-to-br from-white to-gray-50/30">
+            <CardHeader className="bg-white border-b border-gray-100 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <svg
+                      className="w-5 h-5 text-blue-600"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-gray-900">
+                      Mô tả sản phẩm
+                    </CardTitle>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Tạo mô tả chi tiết và hấp dẫn cho sản phẩm của bạn
+                    </p>
+                  </div>
+                </div>
+                {showEditor && (
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <div className="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                      Đang chỉnh sửa
+                    </span>
+                  </div>
+                )}
+              </div>
             </CardHeader>
-            <CardContent>
+
+            <CardContent className="p-6">
               <FormField
                 control={form.control}
                 name="description"
                 render={({ field }) => (
                   <FormItem>
                     {!showEditor ? (
-                      <div
-                        className="border-2 border-dashed border-gray-300 p-8 rounded-lg text-center cursor-pointer hover:border-gray-400 transition-colors"
-                        onClick={() => setShowEditor(true)}>
-                        <div className="text-4xl mb-2">✍️</div>
-                        <p className="text-gray-500">
-                          Click để thêm mô tả sản phẩm
-                        </p>
+                      <div className="group relative">
+                        <div
+                          className="border-2 border-dashed border-gray-200 bg-gray-50/50 p-12 rounded-xl text-center cursor-pointer 
+                         hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-300 ease-in-out
+                         group-hover:shadow-md transform group-hover:-translate-y-1"
+                          onClick={() => setShowEditor(true)}>
+                          <div className="space-y-4">
+                            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                              <svg
+                                className="w-8 h-8 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                />
+                              </svg>
+                            </div>
+
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-700 transition-colors">
+                                Bắt đầu viết mô tả sản phẩm
+                              </h3>
+                              <p className="text-gray-500 text-sm max-w-md mx-auto leading-relaxed">
+                                Nhấp vào đây để mở trình soạn thảo và tạo mô tả
+                                chi tiết, hấp dẫn cho sản phẩm của bạn
+                              </p>
+                            </div>
+
+                            <div className="flex items-center justify-center space-x-4 text-xs text-gray-400 pt-2">
+                              <div className="flex items-center space-x-1">
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span>Rich Text</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span>Hình ảnh</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <svg
+                                  className="w-4 h-4"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20">
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                <span>HTML</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        <FormControl>
-                          <EditorComponent
-                            value={field.value}
-                            onChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="text-right">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setShowEditor(false)}>
-                            Ẩn Editor
-                          </Button>
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                          <div className="border-b border-gray-100 px-4 py-3 bg-gray-50/50">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-red-400 rounded-full"></div>
+                                <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
+                                <div className="w-3 h-3 bg-green-400 rounded-full"></div>
+                                <span className="ml-3 text-sm font-medium text-gray-600">
+                                  Trình soạn thảo mô tả sản phẩm
+                                </span>
+                              </div>
+                              <div className="flex items-center space-x-2 text-sm text-gray-500">
+                                <span>Tự động lưu</span>
+                                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="p-4">
+                            <FormControl>
+                              <EditorComponent
+                                value={field.value}
+                                onChange={field.onChange}
+                                className="min-h-[300px] focus:outline-none"
+                                placeholder="Bắt đầu viết mô tả sản phẩm của bạn tại đây..."
+                              />
+                            </FormControl>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                          <div className="flex items-center space-x-4">
+                            <div className="text-sm text-gray-500">
+                              <span className="font-medium">
+                                {field.value?.length || 0}
+                              </span>{" "}
+                              ký tự
+                            </div>
+                            <div className="text-sm text-gray-400">
+                              Cập nhật lần cuối:{" "}
+                              {new Date().toLocaleTimeString("vi-VN")}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center space-x-3">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowEditor(false)}
+                              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors">
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                              Đóng
+                            </Button>
+
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                              <svg
+                                className="w-4 h-4 mr-2"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                />
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                />
+                              </svg>
+                              Xem trước
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     )}
-                    <FormMessage />
+                    <FormMessage className="mt-2" />
                   </FormItem>
                 )}
               />

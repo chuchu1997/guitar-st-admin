@@ -27,8 +27,8 @@ interface ProductBase {
     reviews:[]
     sku:string;
     storeId:number;
-    createdAt: Date;
-    updatedAt: Date;
+    createdAt?: Date;
+    updatedAt?: Date;
 
 
 }

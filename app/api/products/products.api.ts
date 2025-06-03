@@ -49,6 +49,12 @@ const ProductAPI = {
             url:`${url}/${data.id}`,
             data:data
         })
+    },
+    removeProduct:async(id:number)=>{
+        return await api({
+            method:"DELETE",
+            url:`${url}/${id}`
+        })
     }
 }
 export default ProductAPI;
