@@ -79,22 +79,22 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const { storeId } = useParams();
 
   const mockColors: ProductColorInterface[] = [
-    {
-      id: 1,
-      name: "Đỏ Cổ Điển",
-      productId: 1,
-      hex: "#DC2626",
-      price: 100000,
-      stock: 15,
-    },
-    {
-      id: 2,
-      name: "Xanh Dương",
-      productId: 1,
-      hex: "#2563EB",
-      price: 100000,
-      stock: 12,
-    },
+    // {
+    //   id: 1,
+    //   name: "Đỏ Cổ Điển",
+    //   productId: 1,
+    //   hex: "#DC2626",
+    //   price: 100000,
+    //   stock: 15,
+    // },
+    // {
+    //   id: 2,
+    //   name: "Xanh Dương",
+    //   productId: 1,
+    //   hex: "#2563EB",
+    //   price: 100000,
+    //   stock: 12,
+    // },
   ];
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
   const form = useForm<ProductFormValues>({
@@ -305,6 +305,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           <DescriptionSection form={form} loading={loading} />
 
           <VariantSelector
+            onAddVariant={() => {}}
             form={form}
             loading={loading}
             type="color"
