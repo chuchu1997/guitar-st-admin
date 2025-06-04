@@ -20,7 +20,7 @@ import { Dialog ,DialogContent,
 import { Check, Plus, X } from "lucide-react";
 
 interface VariantSelectorProps {
-  form: any;
+
   loading: boolean;
   type: "color" | "size";
   title: string;
@@ -36,9 +36,31 @@ interface VariantSelectorProps {
     stock: number;
   }) => void;
 }
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
+ const colorVariantSchema = z.object({
+  id: z.string().optional(), // có thể là id từ DB hoặc tạm thời
+  name: z.string().min(1, "Tên là bắt buộc"),
+  hex: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Mã màu HEX không hợp lệ"),
+  price: z.number().min(0, "Giá phải >= 0"),
+  stock: z.number().min(0, "Số lượng phải >= 0"),
+});
+const sizeSchema = z.object({
+  id: z.string().optional(), // có thể là id từ DB hoặc tạm thời
+  name: z.string(),
+  price: z.number().min(0),
+  stock: z.number().min(0),
+});
+
+
+const formSchema = z.object({
+  colors: z.array(colorVariantSchema).optional(),
+  sizes: z.array(sizeSchema).optional(),
+});
 export const VariantSelector: React.FC<VariantSelectorProps> = ({
-  form,
+
   loading,
   type,
   title,
@@ -50,7 +72,12 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
   onAddVariant,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-
+    const form = useForm<z.infer<typeof formSchema>>({
+  resolver: zodResolver(formSchema),
+  defaultValues: {
+    colors: [], // khởi tạo rỗng hoặc có sẵn
+  },
+});
   // State dialog tạo mới biến thể
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newName, setNewName] = useState("");

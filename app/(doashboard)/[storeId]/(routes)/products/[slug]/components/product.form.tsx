@@ -45,28 +45,6 @@ const formSchema = z.object({
   sku: z.string().min(1, "SKU là bắt buộc"),
   stock: z.coerce.number().min(0, "Số lượng không được âm"),
   // Required colors selection
-  colors: z
-    .array(
-      z.object({
-        id: z.number().min(1),
-        name: z.string().min(1),
-        hex: z.string().min(1),
-        price: z.coerce.number().min(0),
-        stock: z.coerce.number().min(0),
-      })
-    )
-    .optional(),
-  // Optional sizes
-  sizes: z
-    .array(
-      z.object({
-        id: z.number().min(1),
-        name: z.string().min(1),
-        price: z.coerce.number().min(0),
-        stock: z.coerce.number().min(0),
-      })
-    )
-    .optional(),
   viewCount: z.coerce.number().default(0).optional(),
   ratingCount: z.coerce.number().default(5).optional(),
 });
@@ -109,8 +87,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       slug: "",
       sku: "",
       stock: 0,
-      colors: mockColors,
-      sizes: [],
       viewCount: 0,
       ratingCount: 5,
     },
@@ -207,9 +183,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
     console.log("Errors:", form.formState.errors);
 
     // Ví dụ: kiểm tra lỗi cụ thể
-    if (form.formState.errors) {
-      console.log("Có lỗi ở trường colors:", form.formState.errors.colors);
-    }
   }, [form.formState.errors]);
   useEffect(() => {
     fetchCategoriesAndResetForm(); // chỉ gọi khi có dữ liệu
@@ -245,31 +218,24 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       if (initialData) {
         const formData: ProductFormValues = {
           ...initialData,
-          sizes:
-            initialData.sizes !== null &&
-            initialData.sizes !== undefined &&
-            initialData.sizes.length > 0
-              ? initialData.sizes.map((size) => ({
-                  id: size.id ?? 0,
-                  name: size.name ?? "",
-                  stock: size.stock ?? initialData.price,
-                  price: size.price ?? initialData.price,
-                }))
-              : [],
-          colors:
-            initialData.colors !== null &&
-            initialData.colors !== undefined &&
-            initialData.colors.length > 0
-              ? initialData.colors.map((color) => ({
-                  id: color.id ?? 0,
-                  name: color.name,
-                  hex: color.hex,
-                  stock: color.stock ?? initialData.price,
-                  price: color.price ?? initialData.price,
-                }))
-              : [],
+          // colors:
+          //   initialData.colors !== null &&
+          //   initialData.colors !== undefined &&
+          //   initialData.colors.length > 0
+          //     ? initialData.colors.map((color) => ({
+          //         id: color.id ?? 0,
+          //         name: color.name,
+          //         hex: color.hex,
+          //         stock: color.stock ?? initialData.price,
+          //         price: color.price ?? initialData.price,
+          //       }))
+          //     : [],
           categoryId: initialData.categoryId.toString(),
         };
+
+        if (initialData.colors.length > 0) {
+          setSelectedColors(initialData.colors);
+        }
         setTimeout(() => {
           form.reset(formData);
         }, 500);
@@ -306,7 +272,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
           <VariantSelector
             onAddVariant={() => {}}
-            form={form}
             loading={loading}
             type="color"
             title="Màu sắc"
