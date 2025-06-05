@@ -17,6 +17,8 @@ interface StoreBase {
     products:[],
     categories:[],
     news:[]
+    description?:string;
+
 }
 
 export interface CreateStoreInterface extends Omit<Partial<StoreBase>, 'products' | 'categories' | 'news' > {
@@ -29,4 +31,6 @@ export interface StoreInterface extends StoreBase{
 
 }
 
-export interface UpdateStoreInterface extends Partial<Omit<StoreInterface, 'id'>> {}
+export interface UpdateStoreInterface extends Partial<Omit<StoreInterface, 'id'>> {
+    updatedAt:Date
+}

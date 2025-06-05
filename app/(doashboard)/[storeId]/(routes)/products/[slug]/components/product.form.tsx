@@ -6,10 +6,11 @@ import {
   ImageInterface,
   ProductColorInterface,
   ProductInterface,
+  ProductSizeInterface,
 } from "@/types/product";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { ImageUploadSection } from "./product-image-upload";
@@ -21,7 +22,7 @@ import { CategoryInterface } from "@/types/categories";
 import router from "next/router";
 import { DescriptionSection } from "./product-description";
 import { VariantSelector } from "./product-variant-selector";
-import { Palette } from "lucide-react";
+import { Palette, Ruler } from "lucide-react";
 import { SettingsSection } from "./product-setting";
 import { Button } from "@/components/ui/button";
 import ProductAPI from "@/app/api/products/products.api";
@@ -57,23 +58,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const { storeId } = useParams();
 
   const mockColors: ProductColorInterface[] = [
-    // {
-    //   id: 1,
-    //   name: "Đỏ Cổ Điển",
-    //   productId: 1,
-    //   hex: "#DC2626",
-    //   price: 100000,
-    //   stock: 15,
-    // },
-    // {
-    //   id: 2,
-    //   name: "Xanh Dương",
-    //   productId: 1,
-    //   hex: "#2563EB",
-    //   price: 100000,
-    //   stock: 12,
-    // },
+    { id: 1, name: "Đỏ", hex: "#FF0000", price: 100000, stock: 50 },
+    { id: 2, name: "Xanh", hex: "#0000FF", price: 120000, stock: 30 },
+    { id: 3, name: "Vàng", hex: "#FFFF00", price: 90000, stock: 20 },
   ];
+
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -94,91 +83,153 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const [selectedColors, setSelectedColors] = useState<ProductColorInterface[]>(
     []
   );
+  const [selectedSizes, setSelectedSizes] = useState<ProductSizeInterface[]>(
+    []
+  );
   const [categories, setCategories] = useState<CategoryInterface[]>([]);
   const [loading, setLoading] = useState(false);
-  const handleColorToggle = (colorId: string) => {
-    const existing = selectedColors.find((c) => c.id?.toString() === colorId);
-    if (existing) {
+
+  type TempProductVariantColor = Omit<ProductColorInterface, "id"> & {
+    id?: number; // có thể có hoặc không
+    _temp?: boolean; // đánh dấu là màu tạm
+  };
+
+  type TempProductVariantSize = Omit<ProductSizeInterface, "id"> & {
+    id?: number; // có thể có hoặc không
+    _temp?: boolean; // đánh dấu là màu tạm
+  };
+  const handleAddColor = useCallback((newVariant: TempProductVariantColor) => {
+    const variant: ProductColorInterface = {
+      ...(newVariant as ProductColorInterface),
+      id: newVariant.id ?? Number(Date.now()),
+    };
+
+    setSelectedColors((prev) => [...prev, variant]);
+  }, []);
+  const handleAddSize = useCallback((newVariant: TempProductVariantSize) => {
+    const variant: ProductSizeInterface = {
+      ...(newVariant as ProductSizeInterface),
+      id: newVariant.id ?? Number(Date.now()),
+    };
+    setSelectedSizes((prev) => [...prev, variant]);
+  }, []);
+
+  const handleUpdateColor = useCallback(
+    (id: number, updates: Partial<ProductColorInterface>) => {
       setSelectedColors((prev) =>
-        prev.filter((c) => c.id?.toString() !== colorId)
+        prev.map((variant) =>
+          variant.id === id ? { ...variant, ...updates } : variant
+        )
       );
-    } else {
-      const color = mockColors.find((c) => c.id?.toString() === colorId);
-      if (color) {
-        setSelectedColors((prev) => [...prev, color]);
+    },
+    []
+  );
+  const handleUpdateSize = useCallback(
+    (id: number, updates: Partial<ProductSizeInterface>) => {
+      setSelectedSizes((prev) =>
+        prev.map((variant) =>
+          variant.id === id ? { ...variant, ...updates } : variant
+        )
+      );
+    },
+    []
+  );
+  const handleRemoveColor = useCallback((id: number) => {
+    setSelectedColors((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+  const handleRemoveSize = useCallback((id: number) => {
+    setSelectedSizes((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+  const onSubmit = async (data: ProductFormValues) => {
+    try {
+      setLoading(true);
+
+      // Upload ảnh lên S3
+
+      const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
+      const newImages = data.images.filter((img) => img.file); // Ảnh mới (có file cần upload)
+      let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
+      if (newImages.length > 0) {
+        const formData = new FormData();
+        newImages.forEach((img) => {
+          if (img.file) {
+            formData.append("files", img.file);
+          }
+        });
+
+        const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
+        if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+
+        const { imageUrls } = uploadRes.data as { imageUrls: [] };
+        const uploadedImageUrls: ImageInterface[] = imageUrls.map((img) => ({
+          url: img,
+          file: undefined,
+        }));
+
+        //Ghép ảnh mới vào danh sách cuối cùng
+        finalImageUrls = [...oldImages, ...uploadedImageUrls];
+      }
+
+      const {
+        name,
+        description,
+        price,
+        isFeatured = false,
+        slug,
+        stock,
+        sku,
+        categoryId,
+      } = data;
+
+      const cleanedColors = selectedColors.map((color) => {
+        const tempColor = color as ProductColorInterface & { _temp?: boolean };
+        if (tempColor._temp) {
+          const { id, _temp, ...rest } = tempColor;
+          return { ...rest };
+        }
+        return { ...color };
+      });
+      const cleanedSizes = selectedSizes.map((size) => {
+        const tempSize = size as ProductSizeInterface & { _temp?: boolean };
+        if (tempSize._temp) {
+          const { id, _temp, ...rest } = tempSize;
+          return { ...rest };
+        }
+        return { ...size };
+      });
+
+      const payload = {
+        name,
+        description,
+        price,
+        isFeatured,
+        slug,
+        stock,
+        sku,
+        categoryId: Number(categoryId),
+        storeId: Number(storeId),
+        images: finalImageUrls,
+        colors: cleanedColors, // 👈 cleaned colors
+        sizes: cleanedSizes, // 👈 cleaned sizes
+      };
+
+      const res = initialData
+        ? await ProductAPI.updateProduct({ ...payload, id: initialData.id })
+        : await ProductAPI.createProduct(payload);
+
+      if (res.status === 200) {
+        const { message } = res.data as { message: string };
+        toast.success(message);
+      }
+    } catch (err) {
+      toast.error(`Có lỗi xảy ra, vui lòng thử lại! ${err}`);
+    } finally {
+      setLoading(false);
+      if (typeof window !== "undefined") {
+        window.location.href = `/${storeId}/products`;
       }
     }
   };
-  const onSubmit = async (data: ProductFormValues) => {
-    // try {
-    // setLoading(true);
-    console.log("DATA", data);
-
-    // Upload ảnh lên S3
-
-    // const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
-    // const newImages = data.images.filter((img) => img.file); // Ảnh mới (có file cần upload)
-    // let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
-    // if (newImages.length > 0) {
-    //   const formData = new FormData();
-
-    //   newImages.forEach((img) => {
-    //     if (img.file) {
-    //       formData.append("files", img.file);
-    //     }
-    //   });
-
-    //   const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
-    //   if (uploadRes.status !== 200) throw new Error("Upload thất bại");
-
-    //   const { imageUrls } = uploadRes.data as { imageUrls: [] };
-    //   const uploadedImageUrls: ImageInterface[] = imageUrls.map((img) => ({
-    //     url: img,
-    //     file: undefined,
-    //   }));
-
-    // Ghép ảnh mới vào danh sách cuối cùng
-    // finalImageUrls = [...oldImages, ...uploadedImageUrls];
-  };
-
-  // const {
-  //   name,
-  //   description,
-  //   price,
-  //   isFeatured = false,
-  //   slug,
-  //   stock,
-  //   sku,
-  //   categoryId,
-  // } = data;
-
-  // const payload = {
-  //   name,
-  //   description,
-  //   price,
-  //   isFeatured,
-  //   slug,
-  //   stock,
-  //   sku,
-  //   categoryId: Number(categoryId),
-  //   storeId: Number(storeId),
-  //   images: finalImageUrls,
-  // };
-
-  // const res = initialData
-  //   ? await ProductAPI.updateProduct({ ...payload, id: initialData.id })
-  //   : await ProductAPI.createProduct(payload);
-
-  // if (res.status === 200) {
-  //   const { message } = res.data as { message: string };
-  //   toast.success(message);
-  //   router.push(`/${storeId}/products/`);
-  // }
-  // } catch (err) {
-  //   toast.error("Có lỗi xảy ra, vui lòng thử lại!");
-  // } finally {
-  //   setLoading(false);
-  // }
   useEffect(() => {
     console.log("Errors:", form.formState.errors);
 
@@ -218,23 +269,14 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       if (initialData) {
         const formData: ProductFormValues = {
           ...initialData,
-          // colors:
-          //   initialData.colors !== null &&
-          //   initialData.colors !== undefined &&
-          //   initialData.colors.length > 0
-          //     ? initialData.colors.map((color) => ({
-          //         id: color.id ?? 0,
-          //         name: color.name,
-          //         hex: color.hex,
-          //         stock: color.stock ?? initialData.price,
-          //         price: color.price ?? initialData.price,
-          //       }))
-          //     : [],
           categoryId: initialData.categoryId.toString(),
         };
 
         if (initialData.colors.length > 0) {
           setSelectedColors(initialData.colors);
+        }
+        if (initialData.sizes.length > 0) {
+          setSelectedSizes(initialData.sizes);
         }
         setTimeout(() => {
           form.reset(formData);
@@ -269,34 +311,43 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           />
 
           <DescriptionSection form={form} loading={loading} />
-
           <VariantSelector
-            onAddVariant={() => {}}
             loading={loading}
             type="color"
             title="Màu sắc"
-            icon={<Palette />}
-            options={mockColors}
+            icon={<Palette className="w-4 h-4" />}
             selectedVariants={selectedColors}
-            onToggleVariant={handleColorToggle}
-            onRemoveVariant={(id) =>
-              setSelectedColors((prev) =>
-                prev.filter((c) => c.id?.toString() !== id)
-              )
-            }
+            onRemoveVariant={handleRemoveColor}
+            onAddVariant={(newColorObject) => {
+              let newColorInstance = newColorObject as ProductColorInterface;
+              handleAddColor({
+                hex: newColorInstance.hex, // default hoặc từ UI
+                name: newColorInstance.name,
+                stock: newColorInstance.stock,
+                price: newColorInstance.price,
+                _temp: true,
+              });
+            }}
+            onUpdateVariant={handleUpdateColor}
           />
-
-          {/* <VariantSelector
-            form={form}
+          <VariantSelector
             loading={loading}
             type="size"
             title="Kích thước sản phẩm (Tùy chọn)"
             icon={<Ruler className="w-5 h-5 text-orange-600" />}
-            options={mockSizes}
             selectedVariants={selectedSizes}
-            onToggleVariant={handleSizeToggle}
-            onRemoveVariant={(id) => setSelectedSizes(prev => prev.filter(s => s.sizeId !== id))}
-          /> */}
+            onRemoveVariant={handleRemoveSize}
+            onAddVariant={(newSizeObject) => {
+              let newSizeInstance = newSizeObject as ProductSizeInterface;
+              handleAddSize({
+                name: newSizeInstance.name,
+                stock: newSizeInstance.stock,
+                price: newSizeInstance.price,
+                _temp: true,
+              });
+            }}
+            onUpdateVariant={handleUpdateSize}
+          />
 
           <SettingsSection form={form} loading={loading} />
 

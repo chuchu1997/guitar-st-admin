@@ -1,4 +1,4 @@
-import { CreateStoreInterface } from "@/types/store"
+import { CreateStoreInterface, UpdateStoreInterface } from "@/types/store"
 import api from "../interceptor"
 
 
@@ -37,6 +37,19 @@ const StoresAPI = {
                 userID:userID
             },
 
+        })
+    },
+    updateStore:async(storeId:string,data:UpdateStoreInterface)=>{
+        return await api({
+            method:"PATCH",
+            url:`${url}/${storeId}`,
+            data
+        })
+    },
+    deleteStore:async(storeId:string)=>{
+        return await api({
+            method:"DELETE",
+            url:`${url}/${storeId}`
         })
     }
 }

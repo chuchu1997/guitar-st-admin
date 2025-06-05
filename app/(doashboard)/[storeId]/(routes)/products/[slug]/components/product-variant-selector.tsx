@@ -1,6 +1,8 @@
+/** @format */
+
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,313 +12,436 @@ import {
   FormField,
   FormItem,
   FormLabel,
-
 } from "@/components/ui/form";
-import { Dialog ,DialogContent,
+import {
+  Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogTrigger, } from "@/components/ui/dialog";
-import { Check, Plus, X } from "lucide-react";
+} from "@/components/ui/dialog";
+import { Check, Plus, X, Palette, Ruler } from "lucide-react";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ProductColorInterface, ProductSizeInterface } from "@/types/product";
+import { HexColorPicker } from "react-colorful";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { NumericFormat } from "react-number-format";
+
+export type Variant = ProductColorInterface | ProductSizeInterface;
+
+// Type guards
+const isColorVariant = (variant: Variant): variant is ProductColorInterface => {
+  return "hex" in variant;
+};
 
 interface VariantSelectorProps {
-
   loading: boolean;
   type: "color" | "size";
   title: string;
   icon: React.ReactNode;
-  options: any[];
-  selectedVariants: any[];
-  onToggleVariant: (id: string) => void;
-  onRemoveVariant: (id: string) => void;
-  onAddVariant: (variant: {
-    name: string;
-    price: number;
-    hex?: string;
-    stock: number;
-  }) => void;
+  selectedVariants: Variant[];
+  onRemoveVariant: (id: number) => void;
+  onAddVariant: (variant: Omit<Variant, "id">) => void;
+  onUpdateVariant: (id: number, updates: Partial<Variant>) => void;
 }
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 
- const colorVariantSchema = z.object({
-  id: z.string().optional(), // có thể là id từ DB hoặc tạm thời
+// Schemas
+const baseVariantSchema = z.object({
   name: z.string().min(1, "Tên là bắt buộc"),
-  hex: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Mã màu HEX không hợp lệ"),
   price: z.number().min(0, "Giá phải >= 0"),
   stock: z.number().min(0, "Số lượng phải >= 0"),
 });
-const sizeSchema = z.object({
-  id: z.string().optional(), // có thể là id từ DB hoặc tạm thời
-  name: z.string(),
-  price: z.number().min(0),
-  stock: z.number().min(0),
+
+const colorVariantSchema = baseVariantSchema.extend({
+  hex: z.string().regex(/^#([0-9A-F]{3}){1,2}$/i, "Mã màu HEX không hợp lệ"),
 });
 
+const sizeVariantSchema = baseVariantSchema;
 
-const formSchema = z.object({
-  colors: z.array(colorVariantSchema).optional(),
-  sizes: z.array(sizeSchema).optional(),
-});
+// Type for form data
+type ColorFormData = z.infer<typeof colorVariantSchema>;
+type SizeFormData = z.infer<typeof sizeVariantSchema>;
+type FormData = ColorFormData | SizeFormData;
+
+// Optimized VariantSelector Component
 export const VariantSelector: React.FC<VariantSelectorProps> = ({
-
   loading,
   type,
   title,
   icon,
-  options,
+
   selectedVariants,
-  onToggleVariant,
+
   onRemoveVariant,
   onAddVariant,
+  onUpdateVariant,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-    const form = useForm<z.infer<typeof formSchema>>({
-  resolver: zodResolver(formSchema),
-  defaultValues: {
-    colors: [], // khởi tạo rỗng hoặc có sẵn
-  },
-});
-  // State dialog tạo mới biến thể
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newPrice, setNewPrice] = useState<number | "">("");
-  const [newHex, setNewHex] = useState("");
-  const [newStock, setNewStock] = useState<number | "">("");
 
-  // Hàm submit thêm mới variant
-  const handleAddVariant = () => {
-    if (
-      !newName.trim() ||
-      newPrice === "" ||
-      newStock === "" ||
-      (type === "color" && !newHex.trim())
-    ) {
-      alert("Vui lòng nhập đầy đủ thông tin hợp lệ");
-      return;
-    }
-    onAddVariant({
-      name: newName.trim(),
-      price: Number(newPrice),
-      hex: type === "color" ? newHex.trim() : undefined,
-      stock: Number(newStock),
-    });
-    // Reset form và đóng dialog
-    setNewName("");
-    setNewPrice("");
-    setNewHex("");
-    setNewStock("");
-    setIsDialogOpen(false);
-  };
+  // Form schema and form based on type
+  const formSchema = useMemo(
+    () => (type === "color" ? colorVariantSchema : sizeVariantSchema),
+    [type]
+  );
+
+  // Form for adding new variants with proper typing
+  const addForm = useForm<any>({
+    resolver: zodResolver(formSchema),
+    defaultValues:
+      type === "color"
+        ? { name: "", price: 0, stock: 10, hex: "#000000" }
+        : { name: "", price: 0, stock: 10 },
+  });
+
+  // Memoized selected variant IDs for performance
+  const selectedVariantIds = useMemo(
+    () => new Set(selectedVariants.map((v) => v.id)),
+    [selectedVariants]
+  );
+
+  // Callbacks for better performance
+
+  const handleRemoveVariant = useCallback(
+    (id: number) => {
+      onRemoveVariant(id);
+    },
+    [onRemoveVariant]
+  );
+
+  const handleAddVariant = useCallback(
+    async (data: FormData) => {
+      try {
+        onAddVariant(data);
+        addForm.reset();
+        setIsDialogOpen(false);
+      } catch (error) {
+        console.error("Error adding variant:", error);
+      }
+    },
+    [onAddVariant, addForm]
+  );
+
+  const handleUpdateVariant = useCallback(
+    (id: number, field: string, value: any) => {
+      const updates = { [field]: value };
+      onUpdateVariant(id, updates);
+    },
+    [onUpdateVariant]
+  );
+
+  const toggleVisibility = useCallback(() => {
+    setIsVisible((prev) => !prev);
+  }, []);
 
   return (
     <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-x-2">
-            {icon}
-            <CardTitle className="text-lg">{title}</CardTitle>
-          </div>
-          <div className="flex items-center gap-x-2">
-            {/* Nút tạo mới biến thể */}
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              Thêm mới
-            </Button>
-            {/* Nút mở rộng/thu gọn */}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsVisible(!isVisible)}
-            >
-              {isVisible ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            </Button>
+      <Card className="w-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
+                {icon}
+              </div>
+              <div>
+                <CardTitle className="text-lg font-semibold">{title}</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {selectedVariants.length} đã chọn
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setIsDialogOpen(true)}
+                disabled={loading}
+                className="gap-2">
+                <Plus className="w-4 h-4" />
+                Thêm mới
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          {isVisible && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {options.map((option) => {
-                const isSelected = selectedVariants.some(
-                  (variant) => variant.id === option.id
-                );
-
-                return (
-                  <Button
-                    key={option.id}
-                    type="button"
-                    variant={isSelected ? "default" : "outline"}
-                    onClick={() => onToggleVariant(option.id.toString())}
-                    className="flex items-center justify-between"
-                  >
-                    <span>
-                      {option.name}{" "}
-                      {type === "color" && option.hex && (
-                        <span
-                          className="inline-block ml-2 w-4 h-4 rounded-full"
-                          style={{ backgroundColor: option.hex }}
-                        />
-                      )}
-                    </span>
-                    {isSelected && <Check className="w-4 h-4 ml-2" />}
-                  </Button>
-                );
-              })}
-            </div>
-          )}
-
+        <CardContent className="space-y-6">
           <div className="space-y-4">
-            {selectedVariants.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Chưa có biến thể nào được chọn.
-              </p>
-            )}
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                Biến thể đã chọn
+              </h4>
+              {selectedVariants.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {selectedVariants.length} biến thể
+                </Badge>
+              )}
+            </div>
 
-            {selectedVariants.map((variant, index) => (
-              <div
-                key={variant.id}
-                className="border rounded-md p-4 grid grid-cols-1 md:grid-cols-4 items-center gap-4"
-              >
-                <div className="flex items-center gap-x-2">
-                  <Badge variant="outline">{variant.name}</Badge>
-                  {type === "color" && variant.hex && (
-                    <div
-                      className="w-4 h-4 rounded-full"
-                      style={{ backgroundColor: variant.hex }}
-                    />
+            {selectedVariants.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted flex items-center justify-center">
+                  {type === "color" ? (
+                    <Palette className="w-6 h-6" />
+                  ) : (
+                    <Ruler className="w-6 h-6" />
                   )}
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name={`${type === "color" ? "colors" : "sizes"}.${index}.price`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Giá</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          disabled={loading}
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name={`${type === "color" ? "colors" : "sizes"}.${index}.stock`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Số lượng</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          disabled={loading}
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onRemoveVariant(variant.id.toString())}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
+                <p className="text-sm">Chưa có biến thể nào được chọn</p>
+                <p className="text-xs mt-1">Chọn từ danh sách hoặc tạo mới</p>
               </div>
-            ))}
+            ) : (
+              <div className="space-y-3">
+                {selectedVariants.map((variant, index) => (
+                  <div
+                    key={variant.id}
+                    className="border rounded-lg p-4 bg-card hover:bg-accent/50 transition-colors">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+                      {/* Variant Info */}
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="font-medium">
+                          {variant.name}
+                        </Badge>
+                        {type === "color" && isColorVariant(variant) && (
+                          <div
+                            className="w-5 h-5 rounded-full border-2 border-border"
+                            style={{ backgroundColor: variant.hex }}
+                          />
+                        )}
+                      </div>
+
+                      {/* Price Input */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Giá (VND)
+                        </label>
+                        <NumericFormat
+                          thousandSeparator="."
+                          decimalSeparator=","
+                          suffix=" ₫"
+                          allowNegative={false}
+                          placeholder="299.000 ₫"
+                          disabled={loading}
+                          customInput={Input}
+                          className="focus:ring-2 focus:ring-blue-500"
+                          value={variant.price}
+                          onValueChange={(priceValue) => {
+                            handleUpdateVariant(
+                              variant.id ?? 0,
+                              "price",
+                              priceValue.floatValue
+                            );
+                          }}
+                        />
+                      </div>
+
+                      {/* Stock Input */}
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">
+                          Số lượng
+                        </label>
+                        <Input
+                          type="number"
+                          value={variant.stock}
+                          onChange={(e) =>
+                            handleUpdateVariant(
+                              variant.id ?? 0,
+                              "stock",
+                              Number(e.target.value)
+                            )
+                          }
+                          disabled={loading}
+                          className="h-9 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          min="0"
+                        />
+                      </div>
+
+                      {/* Remove Button */}
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveVariant(variant.id ?? 0)}
+                          disabled={loading}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10">
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Dialog thêm mới biến thể */}
+      {/* Add Variant Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Thêm mới {title}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {icon}
+              Thêm mới {title}
+            </DialogTitle>
           </DialogHeader>
+
           <div className="space-y-4">
-            <FormItem>
-              <FormLabel>Tên</FormLabel>
-              <Input
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                disabled={loading}
-                placeholder="Tên biến thể"
+            <div className="space-y-4">
+              <FormField
+                control={addForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tên biến thể *</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        disabled={loading}
+                        placeholder={`Tên ${title.toLowerCase()}`}
+                      />
+                    </FormControl>
+                    {addForm.formState.errors.name && (
+                      <p className="text-xs text-destructive">
+                        {(addForm.formState.errors as any).name?.message}
+                      </p>
+                    )}
+                  </FormItem>
+                )}
               />
-            </FormItem>
 
-            <FormItem>
-              <FormLabel>Giá</FormLabel>
-              <Input
-                type="number"
-                value={newPrice}
-                onChange={(e) =>
-                  setNewPrice(e.target.value === "" ? "" : Number(e.target.value))
-                }
-                disabled={loading}
-                placeholder="Giá"
-              />
-            </FormItem>
-
-            {type === "color" && (
-              <FormItem>
-                <FormLabel>Màu (HEX)</FormLabel>
-                <Input
-                  type="text"
-                  value={newHex}
-                  onChange={(e) => setNewHex(e.target.value)}
-                  disabled={loading}
-                  placeholder="#000000"
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={addForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Giá (VND ) *</FormLabel>
+                      <FormControl>
+                        <NumericFormat
+                          thousandSeparator="."
+                          decimalSeparator=","
+                          suffix=" ₫"
+                          allowNegative={false}
+                          placeholder="299.000 ₫"
+                          disabled={loading}
+                          customInput={Input}
+                          className="focus:ring-2 focus:ring-blue-500"
+                          value={field.value}
+                          onValueChange={(priceValue) => {
+                            field.onChange(priceValue.floatValue);
+                          }}
+                        />
+                      </FormControl>
+                      {addForm.formState.errors.price && (
+                        <p className="text-xs text-destructive">
+                          {(addForm.formState.errors as any).price?.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
                 />
-              </FormItem>
-            )}
 
-            <FormItem>
-              <FormLabel>Số lượng</FormLabel>
-              <Input
-                type="number"
-                value={newStock}
-                onChange={(e) =>
-                  setNewStock(e.target.value === "" ? "" : Number(e.target.value))
-                }
+                <FormField
+                  control={addForm.control}
+                  name="stock"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Số lượng *</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          className="h-9 appearance-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                          type="number"
+                          disabled={loading}
+                          placeholder="0"
+                          min="10"
+                          onChange={(e) =>
+                            field.onChange(Number(e.target.value))
+                          }
+                        />
+                      </FormControl>
+                      {addForm.formState.errors.stock && (
+                        <p className="text-xs text-destructive">
+                          {(addForm.formState.errors as any).stock?.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              {type === "color" && (
+                <FormField
+                  control={addForm.control}
+                  name={"hex" as any}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mã màu HEX *</FormLabel>
+                      <FormControl>
+                        <div className="flex gap-2">
+                          <Input
+                            {...field}
+                            disabled={loading}
+                            placeholder="#000000"
+                            className="flex-1"
+                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <div
+                                className="w-10 h-10 rounded border border-border cursor-pointer"
+                                style={{
+                                  backgroundColor: field.value || "#000000",
+                                }}
+                                title="Chọn màu"
+                              />
+                            </PopoverTrigger>
+
+                            <PopoverContent className="w-auto p-2">
+                              <HexColorPicker
+                                color={field.value || "#000000"}
+                                onChange={(color) => field.onChange(color)}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </FormControl>
+                      {addForm.formState.errors.hex && (
+                        <p className="text-xs text-destructive">
+                          {(addForm.formState.errors as any).hex?.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                disabled={loading}>
+                Hủy
+              </Button>
+              <Button
+                type="button"
+                onClick={addForm.handleSubmit(handleAddVariant)}
                 disabled={loading}
-                placeholder="Số lượng"
-              />
-            </FormItem>
+                className="gap-2">
+                <Plus className="w-4 h-4" />
+                Thêm biến thể
+              </Button>
+            </DialogFooter>
           </div>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setIsDialogOpen(false)}
-              disabled={loading}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              onClick={handleAddVariant}
-              disabled={loading}
-            >
-              Thêm
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

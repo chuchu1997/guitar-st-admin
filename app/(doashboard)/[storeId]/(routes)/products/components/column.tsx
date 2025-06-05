@@ -6,6 +6,7 @@ import { ColumnDef } from "@tanstack/react-table";
 import { CellAction } from "./cell-action";
 import Image from "next/image";
 import { ProductInterface } from "@/types/product";
+import { FormatUtils } from "@/utils/format";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
@@ -35,13 +36,6 @@ export const columns: ColumnDef<ProductInterface>[] = [
       </div>
     ),
   },
-  // {
-  //   accessorKey: "category",
-  //   header: "Thuộc Danh Mục",
-  //   cell: ({ row }) => (
-  //     <div className="capitalize">{row.original.}</div>
-  //   ),
-  // },
 
   // {
   //   accessorKey: "subCategory",
@@ -60,7 +54,7 @@ export const columns: ColumnDef<ProductInterface>[] = [
   {
     accessorKey: "price",
     header: "Giá",
-    cell: ({ row }) => row.original.price,
+    cell: ({ row }) => FormatUtils.formatPriceVND(row.original.price),
   },
 
   {
@@ -71,6 +65,7 @@ export const columns: ColumnDef<ProductInterface>[] = [
   {
     accessorKey: "createAt",
     header: "Ngày tạo",
+    cell: ({ row }) => FormatUtils.formatDate(row.original.createdAt ?? ""),
   },
   {
     accessorKey: "stock",

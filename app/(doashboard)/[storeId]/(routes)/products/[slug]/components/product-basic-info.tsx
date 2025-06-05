@@ -1,18 +1,35 @@
+/** @format */
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Tag } from "lucide-react";
+import { NumericFormat } from "react-number-format";
+
 interface BasicInfoSectionProps {
   form: any;
   loading: boolean;
   categories: Array<{ id: number; name: string }>;
 }
 
-export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({ 
-  form, 
-  loading, 
-  categories 
+export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
+  form,
+  loading,
+  categories,
 }) => (
   <Card className="shadow-sm">
     <CardHeader>
@@ -52,8 +69,7 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
             <Select
               disabled={loading}
               onValueChange={field.onChange}
-              value={field.value}
-            >
+              value={field.value}>
               <FormControl>
                 <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
                   <SelectValue placeholder="Chọn danh mục" />
@@ -122,12 +138,19 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           <FormItem>
             <FormLabel>Giá cơ bản *</FormLabel>
             <FormControl>
-              <Input
-                type="number"
+              <NumericFormat
+                thousandSeparator="."
+                decimalSeparator=","
+                suffix=" ₫"
+                allowNegative={false}
+                placeholder="299.000 ₫"
                 disabled={loading}
-                {...field}
-                placeholder="299000"
+                customInput={Input}
                 className="focus:ring-2 focus:ring-blue-500"
+                value={field.value}
+                onValueChange={(values) => {
+                  field.onChange(values.floatValue); // Lưu số thật, không phải chuỗi
+                }}
               />
             </FormControl>
             <FormDescription>Giá bán cơ bản (VNĐ)</FormDescription>

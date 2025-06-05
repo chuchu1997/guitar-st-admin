@@ -60,9 +60,9 @@ api.interceptors.response.use(
         break;
 
       case 500:
-        if (typeof window !== "undefined") {
-          toast.error(`💥 500 Server Error :${message}`);
-        }
+        // if (typeof window !== "undefined") {
+        //   toast.error(`💥 500 Server Error :${message}`);
+        // }
         break;
       default:
         console.error("🌐 Unknown Error:", message);

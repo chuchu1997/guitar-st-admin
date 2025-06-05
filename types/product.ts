@@ -36,7 +36,7 @@ interface ProductBase {
 export interface ProductColorInterface {
     id?:number;
     name:string;
-    productId:number;
+    productId?:number;
     hex:string;
     price?:number;
     stock:number;
@@ -44,7 +44,7 @@ export interface ProductColorInterface {
 export interface ProductSizeInterface {  
     id?:number;
     name:string;
-    productId:number;
+    productId?:number;
     price?:number;
     stock:number;
 
