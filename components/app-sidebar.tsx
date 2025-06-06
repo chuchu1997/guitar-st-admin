@@ -83,18 +83,18 @@ export function AppSidebar() {
         icon: PackageSearchIcon,
         active: pathname === `/${params.storeId}/products`,
       },
-      {
-        href: `/${params.storeId}/services`,
-        label: "Dịch vụ",
-        icon: LayersIcon,
-        active: pathname === `/${params.storeId}/services`,
-      },
+      // {
+      //   href: `/${params.storeId}/services`,
+      //   label: "Dịch vụ",
+      //   icon: LayersIcon,
+      //   active: pathname === `/${params.storeId}/services`,
+      // },
 
       {
-        href: `/${params.storeId}/billboards`,
-        label: "Hình ảnh",
+        href: `/${params.storeId}/banners`,
+        label: "Quản lý Banner",
         icon: FileImageIcon,
-        active: pathname === `/${params.storeId}/billboards`,
+        active: pathname === `/${params.storeId}/banners`,
       },
       // {
       //   href: `/${params.storeId}/sizes`,

@@ -7,8 +7,9 @@ import { Package } from "lucide-react";
 interface ImageUploadSectionProps {
   form: any;
   loading: boolean;
+  isMultiple?:boolean;
 }
-export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({ form, loading }) => (
+export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({ form, loading ,isMultiple}) => (
   <Card className="shadow-sm">
     <CardHeader>
       <CardTitle className="flex items-center gap-3">
@@ -26,7 +27,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({ form, lo
           <FormItem>
             <FormControl>
               <ImageUpload
-                isMultiple
+                isMultiple = {isMultiple ?? false}
                 disabled={loading}
                 value={field.value.map((img:any) => ({
                   file: img.file,

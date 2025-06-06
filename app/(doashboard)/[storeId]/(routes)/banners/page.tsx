@@ -1,26 +1,21 @@
-
-
 "use client";
-import { NewsClient } from "./components/client";
 import { useEffect, useState } from "react";
 
-
-const NewsPage =  () => {
-
+import { BannerClient } from "./components/client";
+const BannerPage =  () => {
   const [isMounted,setIsMounted] = useState(false);
 
-
   useEffect(()=>{
-    setIsMounted(true)
+    setIsMounted(true);
   },[])
-  if(!isMounted) return null;
-
+  if(!isMounted) return null
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        <NewsClient  />
+        <BannerClient />
       </div>
     </div>
   );
 };
-export default NewsPage;
+
+export default BannerPage;

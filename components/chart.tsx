@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { FormatUtils } from "@/utils/format"
 
 // Sample data for the dashboard
 const trafficData = [
@@ -30,7 +31,7 @@ const orderData = [
 ]
 
 const topProducts = [
-  { name: "Premium Headphones", sales: 2450, color: "#8b5cf6" },
+  { name: "Premium Headphones", sales: 5050, color: "#8b5cf6" },
   { name: "Wireless Mouse", sales: 1890, color: "#06b6d4" },
   { name: "Mechanical Keyboard", sales: 1654, color: "#10b981" },
   { name: "USB-C Hub", sales: 1234, color: "#f59e0b" },
@@ -102,7 +103,7 @@ export function ChartComponent() {
             <DollarSign className="h-5 w-5 opacity-80" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${currentWeekRevenue.toLocaleString()}</div>
+            <div className="text-3xl font-bold">{FormatUtils.formatPriceVND(currentWeekRevenue)}</div>
             <div className="flex items-center mt-2">
               <TrendingUp className="h-4 w-4 mr-1" />
               <span className="text-sm opacity-90">+{revenueGrowth}% với tháng trước</span>

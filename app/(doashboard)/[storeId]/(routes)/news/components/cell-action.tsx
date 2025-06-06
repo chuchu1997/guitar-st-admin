@@ -1,26 +1,18 @@
 "use client";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu";
-import { NewsColumn } from "./column";
-import {
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@radix-ui/react-dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { Copy, Edit, MoreHorizontal, Trash } from "lucide-react";
+
+
 import toast from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import axios from "axios";
+
 import { AlertModal } from "@/components/modals/alert-modal";
 import ActionDropdown from "@/components/action-dropdown";
+import ArticleAPI from "@/app/api/articles/article.api";
+import { ArticleInterface } from "@/types/news";
 
 interface CellActionProps {
-  data: NewsColumn;
+  data: ArticleInterface;
 }
 export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const router = useRouter();
@@ -30,7 +22,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const [open, setOpen] = useState(false);
 
   const onCopy = () => {
-    navigator.clipboard.writeText(data.id);
+    navigator.clipboard.writeText(data.id.toString());
     toast.success("Copy News ID Thành Công");
   };
   const onEdit = () => {
@@ -40,10 +32,18 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-      await axios.delete(`/api/${params.storeId}/news/${data.slug}`);
-
-      router.refresh();
+      let response = await ArticleAPI.deleteArticle(data.id)
+      if (response.status !== 200) {
+        toast.error("Xoá Bài viết thất bại !!");
+        return;
+      }
+      else{ 
+       router.push(`/${params.storeId}/news`);
       toast.success("Xoá Bài viết  thành công !!");
+
+      }
+
+     
     } catch (err) {
       toast.error(
         "Có lỗi ở đâu đó   !!"

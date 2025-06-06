@@ -18,6 +18,9 @@ interface StoreBase {
     categories:[],
     news:[]
     description?:string;
+  
+    
+
 
 }
 

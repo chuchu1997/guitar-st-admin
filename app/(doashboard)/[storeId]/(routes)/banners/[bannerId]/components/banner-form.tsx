@@ -6,15 +6,16 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-
 import { Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
 import {
   Form,
   FormField,
   FormItem,
   FormLabel,
+  FormDescription,
   FormControl,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -22,25 +23,24 @@ import toast from "react-hot-toast";
 import axios from "axios";
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
-
-import { useEffect, useState } from "react";
+import { ApiAlert } from "@/components/ui/api-alert";
+import { userOrigin } from "@/hooks/use-origin";
 import ImageUpload from "@/components/ui/image-upload";
-
-import EditorComponent from "@/components/editor";
-import { ArticleInterface } from "@/types/news";
-import { DescriptionSection } from "../../../products/[slug]/components/product-description";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BannerInterface } from "@/types/banner";
 import { ImageUploadSection } from "../../../products/[slug]/components/product-image-upload";
 import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
-import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import { CheckActiveSectionWithForm } from "@/components/ui/checkActiveSectionWithForm";
 import { ImageInterface } from "@/types/product";
-import ArticleAPI from "@/app/api/articles/article.api";
+import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import BannerAPI from "@/app/api/banners/banner.api";
 
-interface NewsProps {
-  initialData: ArticleInterface | null;
+interface BannerProps {
+  initialData: BannerInterface | null;
 }
 
 const formSchema = z.object({
-  title: z.string().min(1, "Bạn phải nhập tên bài viết"),
+  title: z.string().optional(),
   images: z
     .array(
       z.object({
@@ -49,46 +49,44 @@ const formSchema = z.object({
       })
     )
     .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
-  description: z.string().min(1, "Bạn phải nhập mô tả cho bài viết"),
-  slug: z.string().min(1, "Bạn phải nhập slug cho bài viết"),
+  isActive: z.boolean(),
+  link: z.string().optional(),
 });
 
-type NewsFormValues = z.infer<typeof formSchema>;
+type BannersFormValues = z.infer<typeof formSchema>;
 
-export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
-  const { slug, storeId } = useParams();
-
+export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
   const router = useRouter();
-  const title = initialData ? "Chỉnh sửa bài viết " : "Tạo bài viết ";
+  const { storeId } = useParams();
+
+  const [isReady, setIsReady] = useState(false);
+
+  const title = initialData ? "Chỉnh sửa hình ảnh" : "Tạo hình ảnh  ";
   const description = initialData
-    ? "Chỉnh sửa bài viết "
-    : "Tạo bài viết  mới ";
-  const action = initialData ? "Lưu thay đổi " : "Tạo bài viết ";
+    ? "Chỉnh sửa hình ảnh "
+    : "Tạo 1 hình ảnh mới ";
+  const action = initialData ? "Lưu Thay Đổi " : "Tạo mới hình ảnh";
+
   const [open, setOpen] = useState(false);
+  const origin = userOrigin();
 
   const [loading, setLoading] = useState(false);
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  const form = useForm<NewsFormValues>({
+  const form = useForm<BannersFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: initialData || {
       title: "",
-      slug: "",
       images: [],
-      description: "",
+      isActive: false,
+      link: "",
     },
   });
 
-  const onSubmit = async (data: NewsFormValues) => {
+  const onSubmit = async (data: BannersFormValues) => {
     try {
       setLoading(true);
-
       const formData = new FormData();
       const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
-
       let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
-
       if (data.images[0].file) {
         formData.append("files", data.images[0].file);
         const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
@@ -101,47 +99,45 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
         }));
         finalImageUrls = [...uploadedImageUrls];
       }
-
-      const { title, slug, description } = data;
+      console.log("FINAL", finalImageUrls);
       if (initialData) {
-        let response = await ArticleAPI.updateArticle(initialData.id, {
+        let response = await BannerAPI.updateBanner(initialData.id, {
           storeId: Number(storeId),
           imageUrl: finalImageUrls[0].url,
-          title: title,
-          slug: slug,
-          description: description,
+          title: data.title,
+          link: data.link,
+          isActive: data.isActive,
           updatedAt: new Date(),
-          // ...data,
+          position: initialData.position, // Giữ nguyên vị trí cũ
         });
         if (response.status === 200) {
-          const { article, message } = response.data as {
-            article: ArticleInterface;
-            message: string;
-          };
-
+          const { message } = response.data as { message: string };
           toast.success(message);
         }
-        //UPDATE
       } else {
-        //CREATE
-        let response = await ArticleAPI.createArticle({
+        let response = await BannerAPI.createBanner({
           storeId: Number(storeId),
-          title,
-          slug,
-          description,
           imageUrl: finalImageUrls[0].url,
+          title: data.title,
+          link: data.link,
+          isActive: data.isActive,
+          position: 1, // Luôn có giá trị, không để mặc định là 0 (Là vị trí đầu tiên khi thêm mới )
         });
+
         if (response.status === 200) {
-          const { article, message } = response.data as {
-            article: ArticleInterface;
+          const { banner, message } = response.data as {
+            banner: BannerInterface;
             message: string;
           };
           toast.success(message);
         }
+        // await axios.post(`/api/${params.storeId}/billboards`, data);
       }
       // router.refresh();
-      router.push(`/${storeId}/news/`);
+      router.push(`/${storeId}/banners/`);
       // toast.success(toastMessage);
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_err) {
       toast.error("Something when wrong !!");
     } finally {
@@ -151,41 +147,51 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-      let response = await ArticleAPI.deleteArticle(Number(initialData?.id));
-      if (response.status === 200) {
-        const { message } = response.data as { message: string };
-        toast.success(message);
-        router.push(`/${storeId}/news/`);
-      }
+
+      // await axios.delete(
+      //   `/api/${params.storeId}/billboards/${params.billboardId}`
+      // );
+      router.refresh();
+      toast.success("Xóa billboard thành công !!");
     } catch (err) {
       toast.error(
-        `Có lỗi gì đó  !! ${err instanceof Error ? err.message : String(err)}`
+        "Make sure you removed all categories using this billboard first !!"
       );
     } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
-    setIsMounted(true);
-  }, []);
+    if (storeId) {
+      setIsReady(true);
+    }
+  }, [storeId]);
+
   useEffect(() => {
     if (initialData) {
-      const formData: NewsFormValues = {
+      const formData: BannersFormValues = {
         ...initialData,
+        title: initialData.title ?? "",
+        link: initialData.link ?? "",
+        isActive: initialData.isActive ?? false,
         images: [
           {
             file: undefined,
             url: initialData.imageUrl ?? "",
           },
         ],
-        description: initialData.description ?? "",
       };
+
       setTimeout(() => {
         form.reset(formData);
       });
     }
-  }, [initialData]);
-  if (!isMounted) return <>Chưa có dữ liệu</>;
+  }, [initialData, form]);
+  if (!isReady) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <AlertModal
@@ -214,44 +220,50 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
       </div>
 
       <Separator />
+
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" w-full">
-          <div className="grid grid-cols-2 gap-8 mt-[15px]">
+          <ImageUploadSection form={form} loading={loading} />
+
+          <div className="grid grid-cols-3 gap-8 mt-[15px]">
             <InputSectionWithForm
               form={form}
               nameFormField="title"
-              placeholder="Nhập Tên của bài viết"
-              title="Tên của bài viết"
+              placeholder="Nhập Tiêu Đề của Banner (Nếu muốn)"
+              title="Nhập tiêu đề"
               loading={loading}
             />
             <InputSectionWithForm
               form={form}
-              nameFormField="slug"
-              placeholder="Nhập Slug Vào"
-              title="Slug Cho Website"
+              nameFormField="link"
+              placeholder="Nhập đường link của Banner  (Nếu có)"
+              title="Nhập đường link"
               loading={loading}
             />
-            <div className="col-span-2">
-              <ImageUploadSection form={form} loading={loading} />
-            </div>
+            <CheckActiveSectionWithForm
+              form={form}
+              nameFormField={"isActive"}
+              loading={false}
+              title={"Banner có được hiển thị không ?"}
+              action={"Hiển thị Banner"}
+              description={
+                "Nếu check vào thì hình ảnh này được hiển thị ở Banner"
+              }
+            />
+          </div>
 
-            <div className="col-span-2">
-              <DescriptionSection form={form} loading={loading} />
-            </div>
-            {/* LƯU Ý FORM PHẢI TÊN DESCRIPTION NÓ MỚI NHẬN */}
-          </div>
-          <div className="text-center">
-            <Button
-              disabled={loading}
-              className=" w-full md:w-1/2 mt-4"
-              type="submit">
-              {action}
-            </Button>
-          </div>
+          <Button disabled={loading} className="ml-auto mt-4" type="submit">
+            {action}
+          </Button>
         </form>
       </Form>
 
       <Separator />
+      {/* <ApiAlert
+        title="NEXT_PUBLIC_API_URL"
+        description={`${origin}/api/${params.storeId}`}
+        variant="public"
+      /> */}
     </div>
   );
 };

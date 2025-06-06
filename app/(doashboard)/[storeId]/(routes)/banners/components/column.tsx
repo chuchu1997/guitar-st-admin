@@ -5,17 +5,12 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { CellAction } from "./cell-action";
 import Image from "next/image";
+import { BannerInterface } from "@/types/banner";
+import { FormatUtils } from "@/utils/format";
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type BillboardColumn = {
-  id: string;
-  label: string;
-  createAt: string;
-  imageUrl: string;
-  isActiveBanner: boolean;
-};
 
-export const columns: ColumnDef<BillboardColumn>[] = [
+export const columns: ColumnDef<BannerInterface>[] = [
   {
     accessorKey: "label",
     header: "Tên hình",
@@ -31,8 +26,7 @@ export const columns: ColumnDef<BillboardColumn>[] = [
           fill
           className="object-cover rounded-xl"
           loading="eager" // ✅ Ensures images load immediately
-          alt="image-product"
-        ></Image>
+          alt="image-product"></Image>
       </div>
     ),
   },
@@ -42,7 +36,7 @@ export const columns: ColumnDef<BillboardColumn>[] = [
     header: "Hiển thị ở banner",
     cell: ({ row }) => (
       <div className="font-semibold italic ">
-        {row.original.isActiveBanner ? "Có hiển thị" : "Không hiển thị "}
+        {row.original.isActive ? "Có hiển thị" : "Không hiển thị "}
       </div>
     ),
   },
@@ -50,6 +44,9 @@ export const columns: ColumnDef<BillboardColumn>[] = [
   {
     accessorKey: "createAt",
     header: "Ngày tạo",
+    cell: ({ row }) => (
+      <div>{FormatUtils.formatDate(row.original.createdAt ?? "")}</div>
+    ),
   },
   {
     id: "actions",

@@ -1,33 +1,44 @@
-import prismadb from "@/lib/primadb";
+/** @format */
+
+"use client";
+import { useParams } from "next/navigation";
 import { NewsForm } from "./components/new-form";
-// import { CategoryForm } from "./components/category-form";
-// import { BillboardsForm } from "./components/billboard-form";
-import { Size, Color } from "@prisma/client";
+import { useEffect, useState } from "react";
+import ArticleAPI from "@/app/api/articles/article.api";
+import { ArticleInterface } from "@/types/news";
 
-interface NewPageProps {
-  params: Promise<{ slug: string; storeId: string }>;
-}
+const NewPage = () => {
+  const { slug, storeId } = useParams();
 
-const NewPage = async (props: NewPageProps) => {
-  const { params } = props;
-  const { slug, storeId } = await params;
+  const [initialData, setInitialData] = useState<ArticleInterface | null>(null);
 
-  const news = await prismadb.news.findUnique({
-    where: {
-      slug: slug,
-      storeId: storeId,
-    },
-  });
-  
+  useEffect(() => {
+    fetchArticleBySlug();
+  }, []);
+  const fetchArticleBySlug = async () => {
+    if (slug && slug !== "new") {
+      // CAN GET WITH SLUG
+      let response = await ArticleAPI.getArticlesWithStoreID({
+        storeId: Number(storeId),
+        slug: slug.toString(),
+        currentPage: 1,
+        limit: 1,
+      });
+      if (response.status === 200) {
+        const { articles } = response.data as {
+          articles: ArticleInterface[];
+        };
+        if (articles.length > 0) {
+          setInitialData(articles[0]);
+        }
+      }
+    }
+  };
 
- 
   return (
     <div className="flex">
       <div className="flex-1 space-y-4 p-8 pt-6">
-        <NewsForm
-          initialData={news}
-        
-        />
+        <NewsForm initialData={initialData} />
       </div>
     </div>
   );

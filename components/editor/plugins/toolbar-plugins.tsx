@@ -188,7 +188,7 @@ const ToolbarPlugins = () => {
   };
 
   return (
-    <div className="flex items-center gap-1 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-lg">
+    <div className="w-[300px] overflow-x-scroll md:w-full md:overflow-hidden flex items-center gap-1 p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-lg">
       {/* History */}
       <div className="flex items-center gap-1">
         <ToolbarButton

@@ -302,7 +302,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <ImageUploadSection form={form} loading={loading} />
+          <ImageUploadSection form={form} loading={loading} isMultiple />
 
           <BasicInfoSection
             form={form}

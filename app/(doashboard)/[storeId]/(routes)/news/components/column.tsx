@@ -5,17 +5,13 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { CellAction } from "./cell-action";
 import Image from "next/image";
+import { ArticleInterface } from "@/types/news";
+import { FormatUtils } from "@/utils/format";
 
 // This type is used to define the shape of our data.
 // You can use a Zod schema here if you want.
-export type NewsColumn = {
-  id: string;
-  title: string;
-  imageUrl: string;
-  slug: string;
-};
 
-export const columns: ColumnDef<NewsColumn>[] = [
+export const columns: ColumnDef<ArticleInterface>[] = [
   {
     accessorKey: "name",
     header: "Tên bài viết ",
@@ -32,7 +28,7 @@ export const columns: ColumnDef<NewsColumn>[] = [
     cell: ({ row }) => (
       <div className="relative w-[80px] h-[80px] ">
         <Image
-          src={row.original.imageUrl}
+          src={row.original.imageUrl ?? ""}
           fill
           className="object-cover rounded-xl"
           loading="eager" // ✅ Ensures images load immediately
@@ -43,6 +39,9 @@ export const columns: ColumnDef<NewsColumn>[] = [
   {
     accessorKey: "createAt",
     header: "Ngày tạo",
+    cell: ({ row }) => (
+      <div>{FormatUtils.formatDate(row.original.createdAt ?? "")}</div>
+    ),
   },
 
   {
