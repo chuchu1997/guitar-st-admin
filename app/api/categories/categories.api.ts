@@ -25,10 +25,10 @@ const CategoryAPI = {
             }
         })
     },
-    updateCategory:async(categoryUpdate:UpdateCategoryInterface)=>{
+    updateCategory:async(id:number,categoryUpdate:UpdateCategoryInterface)=>{
         return await api({
             method:"PATCH",
-            url:`${url}/${categoryUpdate.id}`,
+            url:`${url}/${id}`,
             data:categoryUpdate
         })
     },

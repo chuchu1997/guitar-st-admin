@@ -1,6 +1,6 @@
 /** @format */
 
-interface ArticleBaseInterface {
+export interface ArticleBaseInterface {
   title: string;
   slug: string;
   description: string;
@@ -10,14 +10,14 @@ interface ArticleBaseInterface {
   updatedAt?: Date;
 }
 
-export interface CreateNewArticleInterface
-  extends Partial<Omit<ArticleBaseInterface, "createdAt" | "updatedAt">> {}
-
 export interface ArticleInterface extends ArticleBaseInterface {
   id: number;
 }
 
-export interface UpdateArticleInterface
-  extends Partial<Omit<ArticleInterface, "id">> {
+export interface CreateNewArticleInterface
+  extends Omit<ArticleBaseInterface, "createdAt" | "updatedAt"> {}
+
+export interface UpdateNewArticleInterface
+  extends Omit<ArticleInterface, "id"> {
   updatedAt: Date;
 }

@@ -30,6 +30,7 @@ export const BannerClient = () => {
       if (response.status === 200) {
         const { banners } = response.data as { banners: BannerInterface[] };
         setBanners(banners);
+        console.log("ALL BANNER",banners);
       }
     }
   }

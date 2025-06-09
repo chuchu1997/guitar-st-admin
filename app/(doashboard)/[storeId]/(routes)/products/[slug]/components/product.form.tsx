@@ -17,7 +17,7 @@ import { ImageUploadSection } from "./product-image-upload";
 import { BasicInfoSection } from "./product-basic-info";
 import toast from "react-hot-toast";
 import CategoryAPI from "@/app/api/categories/categories.api";
-import { useParams } from "next/navigation";
+import { redirect, useParams } from "next/navigation";
 import { CategoryInterface } from "@/types/categories";
 import router from "next/router";
 import { DescriptionSection } from "./product-description";
@@ -214,7 +214,10 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       };
 
       const res = initialData
-        ? await ProductAPI.updateProduct({ ...payload, id: initialData.id })
+        ? await ProductAPI.updateProduct(initialData.id, {
+            ...payload,
+            updatedAt: new Date(),
+          })
         : await ProductAPI.createProduct(payload);
 
       if (res.status === 200) {
@@ -258,10 +261,13 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
       if (categories.length <= 0) {
         const toastId = toast.error("Chưa có danh mục để tạo sản phẩm");
+
         setTimeout(() => {
           toast.dismiss(toastId);
-          router.push(`/${storeId}/categories`);
-        }, 3000);
+          window.location.href = `/${storeId}/categories`;
+
+          // router.push(`/${storeId}/categories`);
+        }, 1500);
         return; // thoát sớm nếu không có danh mục
       }
 

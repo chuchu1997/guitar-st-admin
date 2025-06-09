@@ -10,7 +10,7 @@ const buttonVariants = cva(
     "transition-all duration-300 ease-out transform-gpu",
     "disabled:pointer-events-none disabled:opacity-40 disabled:scale-95",
     "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    "active:scale-[0.98] hover:scale-[1.02]",
+    "active:scale-[0.98] hover:scale-[1]",
     // Icon styles
     "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0",
     // Enhanced accessibility

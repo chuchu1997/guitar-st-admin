@@ -6,27 +6,17 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import { Trash } from "lucide-react";
+import { ArrowUpAZ, Captions, Link, Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormDescription,
-  FormControl,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import toast from "react-hot-toast";
-import axios from "axios";
+
 import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { ApiAlert } from "@/components/ui/api-alert";
-import { userOrigin } from "@/hooks/use-origin";
-import ImageUpload from "@/components/ui/image-upload";
-import { Checkbox } from "@/components/ui/checkbox";
+
 import { BannerInterface } from "@/types/banner";
 import { ImageUploadSection } from "../../../products/[slug]/components/product-image-upload";
 import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
@@ -51,6 +41,7 @@ const formSchema = z.object({
     .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
   isActive: z.boolean(),
   link: z.string().optional(),
+  position: z.coerce.number().optional(), // Hợp lệ với cả "2" và 2
 });
 
 type BannersFormValues = z.infer<typeof formSchema>;
@@ -61,14 +52,11 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
 
   const [isReady, setIsReady] = useState(false);
 
-  const title = initialData ? "Chỉnh sửa hình ảnh" : "Tạo hình ảnh  ";
-  const description = initialData
-    ? "Chỉnh sửa hình ảnh "
-    : "Tạo 1 hình ảnh mới ";
-  const action = initialData ? "Lưu Thay Đổi " : "Tạo mới hình ảnh";
+  const title = initialData ? "Chỉnh sửa Banner" : "Tạo Banner  ";
+  const description = initialData ? "Chỉnh sửa Banner " : "Tạo Banner mới ";
+  const action = initialData ? "Lưu Thay Đổi " : "Tạo mới Banner";
 
   const [open, setOpen] = useState(false);
-  const origin = userOrigin();
 
   const [loading, setLoading] = useState(false);
   const form = useForm<BannersFormValues>({
@@ -76,8 +64,9 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
     defaultValues: initialData || {
       title: "",
       images: [],
-      isActive: false,
+      isActive: true,
       link: "",
+      position: 1,
     },
   });
 
@@ -99,7 +88,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
         }));
         finalImageUrls = [...uploadedImageUrls];
       }
-      console.log("FINAL", finalImageUrls);
+
       if (initialData) {
         let response = await BannerAPI.updateBanner(initialData.id, {
           storeId: Number(storeId),
@@ -108,7 +97,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
           link: data.link,
           isActive: data.isActive,
           updatedAt: new Date(),
-          position: initialData.position, // Giữ nguyên vị trí cũ
+          position: data.position, // Giữ nguyên vị trí cũ
         });
         if (response.status === 200) {
           const { message } = response.data as { message: string };
@@ -121,7 +110,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
           title: data.title,
           link: data.link,
           isActive: data.isActive,
-          position: 1, // Luôn có giá trị, không để mặc định là 0 (Là vị trí đầu tiên khi thêm mới )
+          position: data.position ?? 1,
         });
 
         if (response.status === 200) {
@@ -147,16 +136,16 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-
-      // await axios.delete(
-      //   `/api/${params.storeId}/billboards/${params.billboardId}`
-      // );
-      router.refresh();
-      toast.success("Xóa billboard thành công !!");
+      if (initialData?.id) {
+        let response = await BannerAPI.deleteBanner(initialData.id);
+        if (response.status === 200) {
+          const { message } = response.data as { message: string };
+          toast.success(message);
+          router.push(`/${storeId}/banners/`);
+        }
+      }
     } catch (err) {
-      toast.error(
-        "Make sure you removed all categories using this billboard first !!"
-      );
+      toast.error("Có lỗi gì đó xảy ra !! ");
     } finally {
       setLoading(false);
     }
@@ -175,6 +164,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
         title: initialData.title ?? "",
         link: initialData.link ?? "",
         isActive: initialData.isActive ?? false,
+        position: initialData.position ?? 1,
         images: [
           {
             file: undefined,
@@ -223,21 +213,37 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" w-full">
-          <ImageUploadSection form={form} loading={loading} />
+          <ImageUploadSection
+            form={form}
+            loading={loading}
+            note="Kích thước nên là  1920x600"
+            title="Hình ảnh Banner"
+          />
 
-          <div className="grid grid-cols-3 gap-8 mt-[15px]">
+          <div className="grid grid-cols-2 gap-8 mt-[15px]">
             <InputSectionWithForm
               form={form}
               nameFormField="title"
               placeholder="Nhập Tiêu Đề của Banner (Nếu muốn)"
               title="Nhập tiêu đề"
+              icon={Captions}
               loading={loading}
             />
             <InputSectionWithForm
               form={form}
+              icon={Link}
               nameFormField="link"
               placeholder="Nhập đường link của Banner  (Nếu có)"
               title="Nhập đường link"
+              loading={loading}
+            />
+            <InputSectionWithForm
+              form={form}
+              icon={ArrowUpAZ}
+              type="number"
+              nameFormField={"position"}
+              placeholder="Nhập vị trí của Banner (1,2,3...)"
+              title="Nhập vị trí của Banner"
               loading={loading}
             />
             <CheckActiveSectionWithForm
@@ -259,11 +265,6 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
       </Form>
 
       <Separator />
-      {/* <ApiAlert
-        title="NEXT_PUBLIC_API_URL"
-        description={`${origin}/api/${params.storeId}`}
-        variant="public"
-      /> */}
     </div>
   );
 };

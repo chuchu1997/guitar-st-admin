@@ -7,20 +7,21 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { GlobalRouteLoader } from "@/components/global-loading";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/ui/footer";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { Role } from "@/types/auth";
 import { redirect, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
+import { StoreInterface } from "@/types/store";
+
 interface LayoutProps {
   children: React.ReactNode;
 }
 
 export default function DashboardLayout(props: LayoutProps) {
   const calledRef = useRef(false);
-
   const { children } = props;
-
+  const router = useRouter();
   const { storeId } = useParams();
 
   const [unAuthorize, setUnAuthorize] = useState(true);
@@ -37,19 +38,23 @@ export default function DashboardLayout(props: LayoutProps) {
           setUnAuthorize(false);
           const response = await StoresAPI.getStoresByUserID(user.sub);
           if (response.status === 200) {
-            const { stores } = response.data;
-            if (!stores) {
-              console.log("⛔ Không có store, redirect...");
-              redirect("/");
-              // router.push("/");
+            //
+
+            const { stores } = response.data as { stores: StoreInterface[] };
+
+            if (
+              !stores ||
+              stores.length === 0 ||
+              !stores.some((store) => store.id === Number(storeId))
+            ) {
+              router.push("/");
+              return;
             }
           }
         }
       } catch (err: any) {
         if (err.status === 401) {
-          console.log("THIS CALL");
           setUnAuthorize(true);
-
           redirect("/login");
         }
       }

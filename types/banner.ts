@@ -27,7 +27,7 @@ interface BannerBaseInterface {
 }
 
 export interface CreateBannerInterface
-  extends Partial<Omit<BannerBaseInterface, "createdAt" | "updatedAt">> {}
+  extends Omit<BannerBaseInterface, "createdAt" | "updatedAt"> {}
 
 export interface BannerInterface extends BannerBaseInterface {
   id: number;

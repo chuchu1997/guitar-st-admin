@@ -70,7 +70,7 @@ export default function StoreSwitcher({
           role="combobox"
           aria-expanded={open}
           aria-label="Chọn store"
-          className={cn("w-[200px] justify-between", className)}>
+          className={cn(" flex justify-between ", className)}>
           <StoreIcon className="mr-2 h-4 w-4" />
           {currentStore?.label}
           <ChevronsUpDownIcon className="w-4 h-4 shrink-0 ml-auto opacity-50" />

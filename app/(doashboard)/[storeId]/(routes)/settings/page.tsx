@@ -45,7 +45,7 @@ export default function SettingsPage() {
 
         if (responseStore.status === 200) {
           const { store } = responseStore.data as { store: StoreInterface };
-
+          console.log("STORE", store);
           setStore(store);
         }
       }

@@ -1,11 +1,7 @@
 /** @format */
 
-import { CreateStoreInterface, UpdateStoreInterface } from "@/types/store";
 import api from "../interceptor";
-import {
-  CreateNewArticleInterface,
-  UpdateArticleInterface,
-} from "@/types/news";
+
 import { CreateBannerInterface, UpdateBannerInterface } from "@/types/banner";
 
 let url = "/banners";

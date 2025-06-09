@@ -15,7 +15,7 @@ const ProductPage =  () => {
   const [productData,setProductData] = useState<ProductInterface |null>(null);
     useEffect(()=>{
       if(slug){
-              getProductBySlug();
+         getProductBySlug();
       }
   
   },[slug])

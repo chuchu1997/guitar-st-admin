@@ -43,10 +43,10 @@ const ProductAPI = {
             data:data
         })
     },
-    updateProduct:async(data:UpdateProductInterface)=>{
+    updateProduct:async(id:number,data:UpdateProductInterface)=>{
            return await api({
             method:"PATCH",
-            url:`${url}/${data.id}`,
+            url:`${url}/${id}`,
             data:data
         })
     },

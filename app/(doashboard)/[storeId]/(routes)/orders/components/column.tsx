@@ -13,7 +13,6 @@ export type OrderColumn = {
   username: string;
   phone: string;
   address: string;
-
   items: {
     name: string;
     quantity: number;

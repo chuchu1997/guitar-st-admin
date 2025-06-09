@@ -10,7 +10,7 @@ import { DataTable } from "@/components/ui/data-table";
 import { ApiList } from "@/components/ui/api-list";
 
 interface OrderClientProps {
-  data: OrderColumn[];
+
 }
 export const OrderClient = (props: OrderClientProps) => {
   const { data } = props;

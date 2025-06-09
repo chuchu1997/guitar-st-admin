@@ -16,6 +16,7 @@ import { useState } from "react";
 import axios from "axios";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { BannerInterface } from "@/types/banner";
+import BannerAPI from "@/app/api/banners/banner.api";
 
 interface CellActionProps {
   data: BannerInterface;
@@ -36,6 +37,10 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
+      await BannerAPI.deleteBanner(data.id);
+      window.location.href =  `/${params.storeId}/banners`
+   
+
       // await axios.delete(`/api/${params.storeId}/banners/${id}`);
       // router.refresh();
       // toast.success("Xoá Banner thành công !!");

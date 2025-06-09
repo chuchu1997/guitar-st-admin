@@ -23,6 +23,8 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Mail,
+  PhoneCall,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -44,14 +46,23 @@ import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { userOrigin } from "@/hooks/use-origin";
 import { ApiList } from "@/components/ui/api-list";
-import { StoreInterface } from "@/types/store";
+import { SocialType, StoreInterface } from "@/types/store";
 import { motion, AnimatePresence } from "framer-motion";
 import StoresAPI from "@/app/api/stores/stores.api";
+import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
+import { TextAreaSectionWithForm } from "@/components/ui/textAreaSectionWithForm";
+import { ImageUploadSection } from "../../products/[slug]/components/product-image-upload";
 
 interface SettingsProps {
   initialData: StoreInterface;
 }
 
+const socialSchema = z.object({
+  id: z.number().optional(),
+  type: z.nativeEnum(SocialType),
+  url: z.string().url(),
+  storeId: z.number(),
+});
 const formSchema = z.object({
   name: z
     .string()
@@ -59,6 +70,25 @@ const formSchema = z.object({
     .min(3, "Tên store phải có ít nhất 3 ký tự")
     .max(50, "Tên store không được quá 50 ký tự"),
   description: z.string().max(200, "Mô tả không được quá 200 ký tự").optional(),
+
+  email: z.string().email().optional(),
+  phone: z
+    .string()
+    .regex(/^0\d{9}$/i, { message: "Số điện thoại không hợp lệ" })
+    .optional(),
+  logo: z.array(
+    z.object({
+      url: z.string(),
+      file: z.instanceof(File).optional(), // <- optional ở đây
+    })
+  ),
+  favicon: z.array(
+    z.object({
+      url: z.string(),
+      file: z.instanceof(File).optional(), // <- optional ở đây
+    })
+  ),
+  socials: z.array(socialSchema).optional(),
 });
 
 type SettingsFormValues = z.infer<typeof formSchema>;
@@ -157,13 +187,24 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
+  // email: z.string().email().optional(),
+  //   phone: z
+  //     .string()
+  //     .regex(/^0\d{9}$/i, { message: "Số điện thoại không hợp lệ" })
+  //     .optional(),
+  //   logo: z.string().optional(),
+  //   favicon: z.string().optional(),
+  //   socials: z.array(socialSchema).optional(),
   // Performance optimization: Memoized form configuration
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: initialData?.name || "",
       description: initialData?.description || "",
+      email: initialData?.email || "",
+      phone: initialData?.phone || "",
+      logo: [],
+      favicon: [],
     },
     mode: "onChange",
   });
@@ -227,9 +268,8 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
         router.push("/");
       }
     } catch (error) {
-      console.error("Delete error:", error);
       toast.error(
-        "Phải xóa tất cả các (Danh mục và Sản phẩm liên kết với Store) sau đó mới xóa được "
+        "Phải xóa tất cả các (Danh mục ,  Sản phẩm , Tin Tức , Banners , Socials liên kết với Store) sau đó mới xóa được "
       );
     } finally {
       setLoading(false);
@@ -305,60 +345,60 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">
-                        Tên Store *
-                      </FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Input
-                            {...field}
-                            disabled={loading}
-                            placeholder="Nhập tên store của bạn..."
-                            className="pl-10 transition-all duration-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                          />
-                          <Store className="absolute left-3 top-1/3 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Tên này sẽ hiển thị cho khách hàng của bạn
-                      </FormDescription>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
+                <InputSectionWithForm
+                  form={form}
+                  nameFormField="name"
+                  loading={loading}
+                  title="Tên cửa hàng"
+                  placeholder="Vui lòng nhập tên cửa hàng"
+                  icon={Store}
+                />
+                <TextAreaSectionWithForm
+                  form={form}
+                  nameFormField="description"
+                  loading={loading}
+                  title="Mô tả Cửa Hàng"
+                  placeholder="Vui lòng nhập mô tả cho cửa hàng"
                 />
 
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-sm font-semibold text-gray-700">
-                        Mô Tả Store
-                      </FormLabel>
-                      <FormControl>
-                        <Textarea
-                          {...field}
-                          disabled={loading}
-                          placeholder="Mô tả ngắn gọn về store của bạn..."
-                          className="min-h-[80px] resize-none transition-all duration-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                        />
-                      </FormControl>
-                      <FormDescription className="text-xs text-gray-500">
-                        Tối đa 200 ký tự
-                      </FormDescription>
-                      <FormMessage className="text-xs" />
-                    </FormItem>
-                  )}
+                {/* ImageUploadSection */}
+
+                <InputSectionWithForm
+                  form={form}
+                  nameFormField="email"
+                  loading={loading}
+                  title="Email liên hệ của cửa hàng"
+                  placeholder="Vui lòng nhập email cửa hàng"
+                  icon={Mail}
                 />
+                <InputSectionWithForm
+                  form={form}
+                  nameFormField="phone"
+                  loading={loading}
+                  type="number"
+                  title="Hotline của cửa hàng"
+                  placeholder="Vui lòng nhập số hotline của cửa hàng"
+                  icon={PhoneCall}
+                />
+                <ImageUploadSection
+                  form={form}
+                  nameFormField="logo"
+                  loading={loading}
+                  title="Logo của cửa hàng"
+                  note="Kích thước nên là 200x200"
+                />
+                <ImageUploadSection
+                  form={form}
+                  nameFormField="favicon"
+                  loading={loading}
+                  title="Icon nhỏ của website"
+                  note="Định dạng (.ico) kích thước 32x32 "
+                />
+                <div>BỔ SUNG PHẦN SOCIAL Ở ĐÂY NỮA</div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100">
+              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100 justify-center">
                 <Button
                   type="submit"
                   disabled={loading || !isValid || !hasChanges}

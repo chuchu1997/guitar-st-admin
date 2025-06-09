@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 import ImageUpload from "@/components/ui/image-upload";
 
 import EditorComponent from "@/components/editor";
-import { ArticleInterface } from "@/types/news";
+import { ArticleBaseInterface, ArticleInterface } from "@/types/news";
 import { DescriptionSection } from "../../../products/[slug]/components/product-description";
 import { ImageUploadSection } from "../../../products/[slug]/components/product-image-upload";
 import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
@@ -103,15 +103,18 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
       }
 
       const { title, slug, description } = data;
+
+      const payload: ArticleBaseInterface = {
+        storeId: Number(storeId),
+        imageUrl: finalImageUrls[0].url,
+        title: title,
+        slug: slug,
+        description: description,
+      };
       if (initialData) {
         let response = await ArticleAPI.updateArticle(initialData.id, {
-          storeId: Number(storeId),
-          imageUrl: finalImageUrls[0].url,
-          title: title,
-          slug: slug,
-          description: description,
+          ...payload,
           updatedAt: new Date(),
-          // ...data,
         });
         if (response.status === 200) {
           const { article, message } = response.data as {
@@ -124,13 +127,7 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
         //UPDATE
       } else {
         //CREATE
-        let response = await ArticleAPI.createArticle({
-          storeId: Number(storeId),
-          title,
-          slug,
-          description,
-          imageUrl: finalImageUrls[0].url,
-        });
+        let response = await ArticleAPI.createArticle(payload);
         if (response.status === 200) {
           const { article, message } = response.data as {
             article: ArticleInterface;

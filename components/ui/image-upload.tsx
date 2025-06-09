@@ -29,6 +29,7 @@ interface ImageUploadProps {
   maxFiles?: number;
   maxFileSize?: number; // in MB
   acceptedFormats?: string[];
+
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -262,7 +263,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 Ảnh đã chọn ({value.length}{isMultiple ? `/${maxFiles}` : ""})
               </h4>
               {value.length > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 ">
                   <Check className="w-4 h-4 text-green-500" />
                   <span className="text-sm text-green-600 dark:text-green-400 font-medium">Sẵn sàng</span>
                 </div>
@@ -284,23 +285,25 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             )}
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div   className={`${
+    isMultiple ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid grid-cols-1'
+  } gap-4`}>
             {value.map((item, index) => (
               <div
                 key={item.url}
                 className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-102"
               >
                 {/* Image */}
-                <div className="aspect-square relative">
+                <div className="aspect-square max-h-[500px] w-full relative">
                   <Image
                     src={item.url}
                     alt={`Preview ${index + 1}`}
                     fill
-                    className="object-cover transition-all duration-300 group-hover:scale-110"
+                    className="object-cover transition-all duration-300 group-hover:scale-102"
                   />
                   
                   {/* Gradient overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 s group-hover:opacity-100 transition-opacity duration-300" />
                   
                   {/* Remove button */}
                   <button

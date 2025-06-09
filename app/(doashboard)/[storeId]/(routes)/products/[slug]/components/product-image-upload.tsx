@@ -1,48 +1,71 @@
+/** @format */
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import ImageUpload from "@/components/ui/image-upload";
+import {
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
+import ImageUpload, { TempImage } from "@/components/ui/image-upload";
 import { ImageInterface } from "@/types/product";
 import { Package } from "lucide-react";
 
 interface ImageUploadSectionProps {
   form: any;
   loading: boolean;
-  isMultiple?:boolean;
+  isMultiple?: boolean;
+  note?: string;
+  title?: string;
+  nameFormField?: string;
 }
-export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({ form, loading ,isMultiple}) => (
+export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
+  note,
+  form,
+  loading,
+  isMultiple,
+  title = "Hình ảnh sản phẩm",
+  nameFormField = "images",
+}) => (
   <Card className="shadow-sm">
     <CardHeader>
       <CardTitle className="flex items-center gap-3">
         <div className="p-2 bg-blue-50 rounded-lg">
           <Package className="w-5 h-5 text-blue-600" />
         </div>
-        Hình ảnh sản phẩm
+        {title}
       </CardTitle>
+
+      <div className="italic text-gray-800 bg-gray-200 px-3 py-1 rounded-md text-sm max-w-fit mt-1 font-medium">
+        {note && `(${note})`}
+      </div>
     </CardHeader>
     <CardContent>
       <FormField
         control={form.control}
-        name="images"
+        name={nameFormField}
         render={({ field }) => (
           <FormItem>
             <FormControl>
               <ImageUpload
-                isMultiple = {isMultiple ?? false}
+                isMultiple={isMultiple ?? false}
                 disabled={loading}
-                value={field.value.map((img:any) => ({
+                value={field.value.map((img: any) => ({
                   file: img.file,
                   url: img.url,
                 }))}
-                onChange={(images) => {
+                onChange={(images: any) => {
                   field.onChange(
-                    images.map((img) => ({
+                    images.map((img: any) => ({
                       file: img.file,
                       url: img.url,
                     }))
                   );
                 }}
                 onRemove={(url) =>
-                  field.onChange(field.value.filter((img:any) => img.url !== url))
+                  field.onChange(
+                    field.value.filter((img: any) => img.url !== url)
+                  )
                 }
               />
             </FormControl>

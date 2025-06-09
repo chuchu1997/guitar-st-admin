@@ -18,6 +18,8 @@ interface InputProps {
   loading: boolean;
   title: string;
   placeholder: string;
+  type?: "text" | "number" | "email" | "password";
+  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>; // hoặc bất cứ type icon nào bạn dùng
 }
 export const InputSectionWithForm: React.FC<InputProps> = ({
   form,
@@ -25,12 +27,14 @@ export const InputSectionWithForm: React.FC<InputProps> = ({
   nameFormField,
   title,
   placeholder,
+  type = "text",
+  icon: Icon = Package,
 }) => (
   <Card className="shadow-sm">
     <CardHeader>
       <CardTitle className="flex items-center gap-3">
         <div className="p-2 bg-blue-50 rounded-lg">
-          <Package className="w-5 h-5 text-blue-600" />
+          <Icon className="w-5 h-5 text-blue-600" />
         </div>
         {title}
       </CardTitle>
@@ -43,8 +47,9 @@ export const InputSectionWithForm: React.FC<InputProps> = ({
           <FormItem>
             <FormControl>
               <Input
+                className={type === "number" ? "appearance-none" : ""}
                 {...field}
-                type="text"
+                type={type}
                 pattern={nameFormField === "slug" ? "\\S*" : undefined}
                 disabled={loading}
                 placeholder={placeholder}></Input>

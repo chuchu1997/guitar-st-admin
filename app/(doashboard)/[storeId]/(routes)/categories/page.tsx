@@ -40,86 +40,6 @@ interface CategoryWithChildren extends CategoryInterface {
   children?: CategoryWithChildren[];
 }
 
-// const initialCategories: CategoryInterface[] = [
-//   {
-//     id: 1,
-//     name: "Electronics",
-//     slug: "electronics",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Electronic gadgets",
-//     parentId: null,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 2,
-//     name: "Clothing",
-//     slug: "clothing",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Fashion items",
-//     parentId: null,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 3,
-//     name: "Books",
-//     slug: "books",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Reading materials",
-//     parentId: null,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 4,
-//     name: "Smartphones",
-//     slug: "smartphones",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Mobile phones",
-//     parentId: 1,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 6,
-//     name: "Men",
-//     slug: "men",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Men clothing",
-//     parentId: 2,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 7,
-//     name: "Women",
-//     slug: "women",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "Women clothing",
-//     parentId: 2,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-//   {
-//     id: 10,
-//     name: "T-shirts",
-//     slug: "t-shirts",
-//     storeId: 1,
-//     imageBillboard: "",
-//     description: "T-shirts for men",
-//     parentId: 6,
-//     createdAt: new Date(),
-//     updatedAt: new Date(),
-//   },
-// ];
-
 export default function CategoriesManagement() {
   const { storeId } = useParams();
 
@@ -128,7 +48,7 @@ export default function CategoriesManagement() {
   const [name, setName] = useState<string>("");
   const [slug, setSlug] = useState<string>("");
   const [description, setDescription] = useState<string>("");
-  const [imageBillboard, setImageBillboard] = useState<string>("");
+  const [imageUrl, setImageUrl] = useState<string>("");
   const [parentId, setParentId] = useState<string>("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null
@@ -178,10 +98,13 @@ export default function CategoriesManagement() {
     // console.log("SS data", ss);
   };
 
-  const onUpdateCategory = async (category: UpdateCategoryInterface) => {
+  const onUpdateCategory = async (
+    id: number,
+    category: UpdateCategoryInterface
+  ) => {
     // TODO: Implement update API call
 
-    const response = await CategoryAPI.updateCategory(category);
+    const response = await CategoryAPI.updateCategory(id, category);
     if (response.status === 200) {
       const { message } = response.data as { message: string };
       toast.success(message);
@@ -190,19 +113,26 @@ export default function CategoriesManagement() {
 
   const onDeleteCategory = async (categoryId: number) => {
     // TODO: Implement delete API call
-    const response = await CategoryAPI.deleteCategoryFromID(
-      categoryId,
-      Number(storeId)
-    );
-    if (response.status === 200) {
-      const { message } = response.data as {
-        message: string;
-        category: CategoryInterface;
-      };
-      toast.success(message);
 
-      setCategories((prev) =>
-        prev.filter((category) => category.id !== categoryId)
+    try {
+      const response = await CategoryAPI.deleteCategoryFromID(
+        categoryId,
+        Number(storeId)
+      );
+      if (response.status === 200) {
+        const { message } = response.data as {
+          message: string;
+          category: CategoryInterface;
+        };
+        toast.success(message);
+
+        setCategories((prev) =>
+          prev.filter((category) => category.id !== categoryId)
+        );
+      }
+    } catch (err) {
+      toast.error(
+        "Phải xóa các sản phẩm liên kết với danh mục này trước khi xóa "
       );
     }
     //  setCategories(prev => prev.filter(category => category.id !== categoryId));
@@ -225,7 +155,7 @@ export default function CategoriesManagement() {
 
   // Create a new category
   const handleCreateCategory = async () => {
-    if (!name || !description || !slug || !imageBillboard) {
+    if (!name || !description || !slug || !imageUrl) {
       setAlertMessage("Tên , mô tả , slug , imageURL không được bỏ trống");
       setShowAlert(true);
       return;
@@ -235,7 +165,7 @@ export default function CategoriesManagement() {
       name,
       slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
       storeId: Number(storeId),
-      imageBillboard,
+      imageUrl,
       description,
       parentId: parentId === "0" ? null : parentId ? Number(parentId) : null,
     };
@@ -251,17 +181,15 @@ export default function CategoriesManagement() {
     setName(category.name);
     setSlug(category.slug);
     setDescription(category.description);
-    setImageBillboard(category.imageBillboard);
+    setImageUrl(category.imageUrl);
     setParentId(category.parentId ? String(category.parentId) : "");
     setIsDialogOpen(true);
   };
 
   // Update category
   const handleUpdateCategory = async () => {
-    if (!name || !description || !slug || !imageBillboard) {
-      setAlertMessage(
-        "Name, slug, imageBillboard and description are required"
-      );
+    if (!name || !description || !slug || !imageUrl) {
+      setAlertMessage("Name, slug, Image and description are required");
       setShowAlert(true);
       return;
     }
@@ -273,7 +201,7 @@ export default function CategoriesManagement() {
           name,
           slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
           description,
-          imageBillboard,
+          imageUrl,
           parentId:
             parentId === "0" ? null : parentId ? Number(parentId) : null,
           updatedAt: new Date(),
@@ -287,7 +215,10 @@ export default function CategoriesManagement() {
       (cat) => cat.id === editingCategoryId
     );
     if (editingCategory) {
-      await onUpdateCategory(editingCategory);
+      const updateCate = editingCategory as UpdateCategoryInterface;
+      updateCate.updatedAt = new Date();
+
+      await onUpdateCategory(editingCategory.id, updateCate);
       // xử lý nếu không tìm thấy category
     }
 
@@ -300,7 +231,7 @@ export default function CategoriesManagement() {
     setName("");
     setSlug("");
     setDescription("");
-    setImageBillboard("");
+    setImageUrl("");
     setParentId("");
     setEditingCategoryId(null);
     setShowAlert(false);
@@ -327,9 +258,9 @@ export default function CategoriesManagement() {
                   {category.description}
                 </div>
                 <div className="text-sm text-gray-500">{category.slug}</div>
-                {category.imageBillboard && (
+                {category.imageUrl && (
                   <div className="text-sm text-blue-500">
-                    Billboard: {category.imageBillboard}
+                    Hình ảnh : {category.imageUrl}
                   </div>
                 )}
               </div>
@@ -420,13 +351,13 @@ export default function CategoriesManagement() {
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="imageBillboard" className="text-right">
-                    Billboard
+                  <Label htmlFor="imageUrl" className="text-right">
+                    Hình ảnh đại diện danh mục
                   </Label>
                   <Input
-                    id="imageBillboard"
-                    value={imageBillboard}
-                    onChange={(e) => setImageBillboard(e.target.value)}
+                    id="imageUrl"
+                    value={imageUrl}
+                    onChange={(e) => setImageUrl(e.target.value)}
                     className="col-span-3"
                     placeholder="URL hình ảnh billboard"
                   />
@@ -437,7 +368,7 @@ export default function CategoriesManagement() {
                   </Label>
                   <Select value={parentId} onValueChange={setParentId}>
                     <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Select parent category" />
+                      <SelectValue placeholder="Chọn danh mục cha   " />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="0">Không (Là Danh mục Cha)</SelectItem>

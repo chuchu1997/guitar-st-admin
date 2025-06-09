@@ -52,12 +52,13 @@ export interface ProductSizeInterface {
 
 
 export interface ProductInterface extends ProductBase{
-    id:string;
+    id:number
 
 };
 export interface CreateProductInterface extends Partial<Omit<ProductBase, 'createdAt' | 'updatedAt' | 'orderItems' | 'reviews'>> {
 
 }
-export interface UpdateProductInterface extends Partial<ProductBase> {
-  id: string;
+export interface UpdateProductInterface extends Partial<Omit<ProductInterface,"id">> {
+  updatedAt:Date;
+  
 }
