@@ -24,7 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 
 import { useEffect, useState } from "react";
-import ImageUpload from "@/components/ui/image-upload";
+import ImageUpload from "@/components/ui/ImageUpload/image-upload";
 
 import EditorComponent from "@/components/editor";
 

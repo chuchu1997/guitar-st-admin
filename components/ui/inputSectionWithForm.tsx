@@ -7,7 +7,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import ImageUpload from "@/components/ui/image-upload";
+import ImageUpload from "@/components/ui/ImageUpload/image-upload";
 import { ImageInterface } from "@/types/product";
 import { Package } from "lucide-react";
 import { Input } from "./input";

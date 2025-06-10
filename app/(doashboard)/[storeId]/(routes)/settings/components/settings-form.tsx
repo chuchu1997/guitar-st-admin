@@ -52,6 +52,8 @@ import StoresAPI from "@/app/api/stores/stores.api";
 import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
 import { TextAreaSectionWithForm } from "@/components/ui/textAreaSectionWithForm";
 import { ImageUploadSection } from "../../products/[slug]/components/product-image-upload";
+import { SocialsSection } from "./socials-link-dropdown";
+import S3CloudAPI from "@/app/api/upload/s3-cloud";
 
 interface SettingsProps {
   initialData: StoreInterface;
@@ -61,7 +63,6 @@ const socialSchema = z.object({
   id: z.number().optional(),
   type: z.nativeEnum(SocialType),
   url: z.string().url(),
-  storeId: z.number(),
 });
 const formSchema = z.object({
   name: z
@@ -76,18 +77,16 @@ const formSchema = z.object({
     .string()
     .regex(/^0\d{9}$/i, { message: "Số điện thoại không hợp lệ" })
     .optional(),
-  logo: z.array(
-    z.object({
-      url: z.string(),
-      file: z.instanceof(File).optional(), // <- optional ở đây
-    })
-  ),
-  favicon: z.array(
-    z.object({
-      url: z.string(),
-      file: z.instanceof(File).optional(), // <- optional ở đây
-    })
-  ),
+  logo: z.object({
+    url: z.string(),
+    file: z.instanceof(File).optional(), // <- optional ở đây
+  }),
+
+  favicon: z.object({
+    url: z.string(),
+    file: z.instanceof(File).optional(), // <- optional ở đây
+  }),
+
   socials: z.array(socialSchema).optional(),
 });
 
@@ -203,10 +202,20 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       description: initialData?.description || "",
       email: initialData?.email || "",
       phone: initialData?.phone || "",
-      logo: [],
-      favicon: [],
+      socials: initialData.socials || undefined,
+      logo: initialData.logo
+        ? {
+            file: undefined,
+            url: initialData.logo,
+          }
+        : undefined,
+      favicon: initialData.favicon
+        ? {
+            file: undefined,
+            url: initialData.favicon,
+          }
+        : undefined,
     },
-    mode: "onChange",
   });
 
   const {
@@ -225,6 +234,24 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       setIsReady(true);
     }
   }, [storeId]);
+  // useEffect(() => {
+  //   if (initialData) {
+  //     const formData: SettingsFormValues = {
+  //       ...initialData,
+  //       logo: {
+  //         file: undefined,
+  //         url: initialData.logo ?? "",
+  //       },
+  //       favicon: {
+  //         file: undefined,
+  //         url: initialData.favicon ?? "",
+  //       },
+  //     };
+  //     setTimeout(() => {
+  //       form.reset(formData);
+  //     });
+  //   }
+  // }, [initialData]);
 
   // Performance optimization: Memoized callbacks
   const onSubmit = useCallback(
@@ -233,11 +260,47 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       try {
         setLoading(true);
         if (storeId) {
-          await StoresAPI.updateStore(storeId.toString(), {
+          const finalLogo = data.logo;
+          const finalFav = data.favicon;
+          if (finalLogo.file) {
+            const formData = new FormData();
+            formData.append("files", finalLogo.file);
+            const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
+            if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+            const { imageUrls } = uploadRes.data as { imageUrls: string[] };
+            if (imageUrls.length > 0) {
+              finalLogo.file = undefined;
+              finalLogo.url = imageUrls[0];
+            }
+          }
+          if (finalFav.file) {
+            const formData = new FormData();
+            formData.append("files", finalFav.file);
+            const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
+            if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+            const { imageUrls } = uploadRes.data as { imageUrls: string[] };
+            if (imageUrls.length > 0) {
+              finalFav.file = undefined;
+              finalFav.url = imageUrls[0];
+            }
+          }
+          const payload = {
             name: data.name,
             description: data.description,
+            email: data.email,
+            phone: data.phone,
+            logo: finalLogo.url,
+            favicon: finalFav.url,
+            socials: data.socials?.map((social) => ({
+              id: social.id ?? undefined,
+              type: social.type,
+              url: social.url,
+              storeId: Number(storeId),
+            })),
             updatedAt: new Date(),
-          });
+          };
+          console.log("PAYLOAD", payload);
+          await StoresAPI.updateStore(storeId.toString(), payload);
           setSaveSuccess(true);
           setTimeout(() => setSaveSuccess(false), 3000);
 
@@ -394,7 +457,14 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   title="Icon nhỏ của website"
                   note="Định dạng (.ico) kích thước 32x32 "
                 />
-                <div>BỔ SUNG PHẦN SOCIAL Ở ĐÂY NỮA</div>
+                <div className="col-span-1 md:col-span-2">
+                  <SocialsSection
+                    form={form}
+                    nameFormField="socials"
+                    title="Mạng xã hội Và Sàn Thương Mại (link)"
+                    loading={loading}
+                  />
+                </div>
               </div>
 
               {/* Action Buttons */}

@@ -7,6 +7,19 @@
 
 
 
+
+
+
+
+export enum CategoryVariant {
+  NEWS = "NEWS",
+  COURSES = "COURSES",
+  SERVICES = "SERVICES",
+  PROMOTION = "PROMOTION",
+  CONTACT ="CONTACT",
+}
+
+
 interface CategoryBase { 
     name:string;
     slug:string;
@@ -14,8 +27,10 @@ interface CategoryBase {
     imageUrl:string;
     description:string;
     parentId?:number|null;
+    variant?:CategoryVariant
     createdAt?:Date;
     updatedAt?:Date;
+
 
 }
 

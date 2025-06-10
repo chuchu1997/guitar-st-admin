@@ -30,12 +30,59 @@ import CategoryAPI from "@/app/api/categories/categories.api";
 import { useParams } from "next/navigation";
 import {
   CategoryInterface,
+  CategoryVariant,
   CreateCategoryInterface,
   UpdateCategoryInterface,
 } from "@/types/categories";
 import toast from "react-hot-toast";
+import { z } from "zod";
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
+import { ImageUploadSection } from "../products/[slug]/components/product-image-upload";
+import { TextAreaSectionWithForm } from "@/components/ui/textAreaSectionWithForm";
 
-// Extended interface for tree rendering
+const formSchema = z.object({
+  name: z.string().min(3, "Vui lòng nhập tên của danh mục"),
+  slug: z
+    .string()
+    .min(1, "Slug không được để trống")
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+      message:
+        "Slug chỉ được chứa chữ thường, số và dấu gạch ngang (không có khoảng trắng hoặc ký tự đặc biệt)",
+    })
+    .transform((val) =>
+      val
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9-]/g, "")
+    ),
+  imageUrl: z
+    .object({
+      url: z.string().min(1, "Vui lòng chọn ảnh."),
+      file: z.instanceof(File).optional(),
+    })
+    .refine((val) => !!val.url, {
+      message: "Vui lòng chọn ảnh.",
+    }),
+  parentId: z.string().optional(),
+  variant: z.nativeEnum(CategoryVariant).optional(),
+  description: z.string().min(3, "Vui lòng nhập mô tả của danh mục"),
+});
+
+type CategoryFormValues = z.infer<typeof formSchema>;
+
 interface CategoryWithChildren extends CategoryInterface {
   children?: CategoryWithChildren[];
 }
@@ -43,19 +90,22 @@ interface CategoryWithChildren extends CategoryInterface {
 export default function CategoriesManagement() {
   const { storeId } = useParams();
 
+  const form = useForm<CategoryFormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      slug: "",
+      description: "",
+      parentId: "",
+    },
+  });
+
   const [categories, setCategories] = useState<CategoryInterface[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [name, setName] = useState<string>("");
-  const [slug, setSlug] = useState<string>("");
-  const [description, setDescription] = useState<string>("");
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [parentId, setParentId] = useState<string>("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(
     null
   );
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
-  const [showAlert, setShowAlert] = useState<boolean>(false);
-  const [alertMessage, setAlertMessage] = useState<string>("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -68,6 +118,14 @@ export default function CategoriesManagement() {
   }, [isMounted]);
 
   if (!isMounted) return null;
+
+  const CategoryVariantLabels: Record<CategoryVariant, string> = {
+    [CategoryVariant.NEWS]: "Tin tức",
+    [CategoryVariant.COURSES]: "Khóa học",
+    [CategoryVariant.SERVICES]: "Dịch vụ",
+    [CategoryVariant.PROMOTION]: "Khuyến mãi",
+    [CategoryVariant.CONTACT]: "Liên hệ",
+  };
 
   const fetchCategoriesFromAPI = async () => {
     let response = await CategoryAPI.getCategoriesRelateWithStoreID({
@@ -92,28 +150,23 @@ export default function CategoriesManagement() {
       };
       toast.success(message);
       setCategories([...categories, category]);
+      await fetchCategoriesFromAPI(); // Refresh the list
     }
-
-    // let ss = await axios.post("http://localhost:3000/categories", category);
-    // console.log("SS data", ss);
   };
 
   const onUpdateCategory = async (
     id: number,
     category: UpdateCategoryInterface
   ) => {
-    // TODO: Implement update API call
-
     const response = await CategoryAPI.updateCategory(id, category);
     if (response.status === 200) {
       const { message } = response.data as { message: string };
       toast.success(message);
+      await fetchCategoriesFromAPI(); // Refresh the list
     }
   };
 
   const onDeleteCategory = async (categoryId: number) => {
-    // TODO: Implement delete API call
-
     try {
       const response = await CategoryAPI.deleteCategoryFromID(
         categoryId,
@@ -135,7 +188,6 @@ export default function CategoriesManagement() {
         "Phải xóa các sản phẩm liên kết với danh mục này trước khi xóa "
       );
     }
-    //  setCategories(prev => prev.filter(category => category.id !== categoryId));
   };
 
   // Build category tree
@@ -153,91 +205,102 @@ export default function CategoriesManagement() {
 
   const categoryTree = buildCategoryTree(categories);
 
-  // Create a new category
-  const handleCreateCategory = async () => {
-    if (!name || !description || !slug || !imageUrl) {
-      setAlertMessage("Tên , mô tả , slug , imageURL không được bỏ trống");
-      setShowAlert(true);
-      return;
+  // Handle form submission
+  const onSubmit = async (data: CategoryFormValues) => {
+    try {
+      let finalImage = data.imageUrl;
+      if (data.imageUrl.file) {
+        const formData = new FormData();
+        formData.append("files", data.imageUrl.file);
+        const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
+        if (uploadRes.status !== 200) throw new Error("Upload thất bại");
+        const { imageUrls } = uploadRes.data as { imageUrls: string[] };
+        if (imageUrls.length > 0) {
+          finalImage.file = undefined;
+          finalImage.url = imageUrls[0];
+        }
+      }
+      if (editingCategoryId) {
+        // Update existing category
+        const updateData: UpdateCategoryInterface = {
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          imageUrl: finalImage.url,
+          parentId:
+            data.parentId === "0" || !data.parentId
+              ? null
+              : Number(data.parentId),
+          updatedAt: new Date(),
+          storeId: Number(storeId),
+          variant: data.variant ?? undefined,
+        };
+
+        await onUpdateCategory(editingCategoryId, updateData);
+      } else {
+        // Create new category
+        const newCategory: CreateCategoryInterface = {
+          name: data.name,
+          slug: data.slug,
+          storeId: Number(storeId),
+          imageUrl: finalImage.url,
+          description: data.description,
+          parentId:
+            data.parentId === "0" || !data.parentId
+              ? null
+              : Number(data.parentId),
+          variant: data.variant ?? undefined,
+        };
+
+        await onCreateCategory(newCategory);
+      }
+
+      resetForm();
+      setIsDialogOpen(false);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error("Có lỗi xảy ra khi xử lý form");
     }
-
-    const newCategory: CreateCategoryInterface = {
-      name,
-      slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
-      storeId: Number(storeId),
-      imageUrl,
-      description,
-      parentId: parentId === "0" ? null : parentId ? Number(parentId) : null,
-    };
-
-    await onCreateCategory(newCategory);
-    resetForm();
-    setIsDialogOpen(false);
   };
 
   // Edit a category
   const handleEditCategory = (category: CategoryInterface) => {
     setEditingCategoryId(category.id);
-    setName(category.name);
-    setSlug(category.slug);
-    setDescription(category.description);
-    setImageUrl(category.imageUrl);
-    setParentId(category.parentId ? String(category.parentId) : "");
-    setIsDialogOpen(true);
-  };
-
-  // Update category
-  const handleUpdateCategory = async () => {
-    if (!name || !description || !slug || !imageUrl) {
-      setAlertMessage("Name, slug, Image and description are required");
-      setShowAlert(true);
-      return;
-    }
-
-    const updatedCategories = categories.map((cat) => {
-      if (cat.id === editingCategoryId) {
-        return {
-          ...cat,
-          name,
-          slug: slug.toLowerCase().replace(/\s+/g, "-").trim(),
-          description,
-          imageUrl,
-          parentId:
-            parentId === "0" ? null : parentId ? Number(parentId) : null,
-          updatedAt: new Date(),
-        };
-      }
-      return cat;
+    form.reset({
+      name: category.name,
+      slug: category.slug,
+      description: category.description,
+      imageUrl: {
+        file: undefined,
+        url: category.imageUrl,
+      },
+      parentId: category.parentId ? String(category.parentId) : "",
+      variant: category.variant ?? undefined,
     });
-    setCategories(updatedCategories);
-
-    const editingCategory = updatedCategories.find(
-      (cat) => cat.id === editingCategoryId
-    );
-    if (editingCategory) {
-      const updateCate = editingCategory as UpdateCategoryInterface;
-      updateCate.updatedAt = new Date();
-
-      await onUpdateCategory(editingCategory.id, updateCate);
-      // xử lý nếu không tìm thấy category
-    }
-
-    resetForm();
-    setIsDialogOpen(false);
+    setIsDialogOpen(true);
   };
 
   // Reset form
   const resetForm = () => {
-    setName("");
-    setSlug("");
-    setDescription("");
-    setImageUrl("");
-    setParentId("");
+    form.reset({
+      name: "",
+      slug: "",
+      description: "",
+      imageUrl: undefined,
+      parentId: "",
+    });
     setEditingCategoryId(null);
-    setShowAlert(false);
   };
 
-  // Delete a category
+  // Auto-generate slug from name
+  const handleNameChange = (value: string) => {
+    const slugValue = value
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
+    form.setValue("slug", slugValue);
+  };
 
   // Render category tree
   const renderCategoryTree = (
@@ -253,11 +316,21 @@ export default function CategoriesManagement() {
                 className={`flex-1 p-2 ${
                   depth > 0 ? "border-l-2 border-gray-200" : ""
                 }`}>
-                <div className="font-medium">{category.name}</div>
-                <div className="text-sm text-gray-500">
-                  {category.description}
+                <div className="font-medium">
+                  Tên danh mục : {category.name}
                 </div>
-                <div className="text-sm text-gray-500">{category.slug}</div>
+                <div className="text-sm text-gray-500">
+                  Mô tả : {category.description}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Slug : {category.slug}
+                </div>
+                {category.variant &&
+                  CategoryVariantLabels[category.variant] && (
+                    <div className="text-sm text-gray-500">
+                      Có biến thể : {CategoryVariantLabels[category.variant]}
+                    </div>
+                  )}
                 {category.imageUrl && (
                   <div className="text-sm text-blue-500">
                     Hình ảnh : {category.imageUrl}
@@ -297,7 +370,7 @@ export default function CategoriesManagement() {
 
   return (
     <div className="container mx-auto p-4">
-      <Card className="w-full">
+      <Card className="w-full ">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Quản lý danh mục</CardTitle>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -310,8 +383,8 @@ export default function CategoriesManagement() {
                 <Plus className="h-4 w-4 mr-1" /> Thêm mới
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
+            <DialogContent className="max-h-[90vh] overflow-y-scroll ">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>
                   <div className="text-center text-xl italic font-semibold">
                     {editingCategoryId
@@ -321,99 +394,134 @@ export default function CategoriesManagement() {
                 </DialogTitle>
               </DialogHeader>
 
-              {showAlert && (
-                <Alert variant="destructive" className="mb-4">
-                  <AlertDescription>{alertMessage}</AlertDescription>
-                </Alert>
-              )}
+              <div className="flex-1 overflow-y-auto px-1">
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6">
+                    <InputSectionWithForm
+                      form={form}
+                      nameFormField="name"
+                      loading={false}
+                      title={"Tên danh mục"}
+                      placeholder={"Vui lòng nhập tên danh mục"}
+                    />
 
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="slug" className="text-right">
-                    Slug
-                  </Label>
-                  <Input
-                    id="slug"
-                    value={slug}
-                    onChange={(e) => setSlug(e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Tên
-                  </Label>
-                  <Input
-                    id="name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="col-span-3"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="imageUrl" className="text-right">
-                    Hình ảnh đại diện danh mục
-                  </Label>
-                  <Input
-                    id="imageUrl"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    className="col-span-3"
-                    placeholder="URL hình ảnh billboard"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="parent" className="text-right">
-                    Danh mục
-                  </Label>
-                  <Select value={parentId} onValueChange={setParentId}>
-                    <SelectTrigger className="col-span-3">
-                      <SelectValue placeholder="Chọn danh mục cha   " />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="0">Không (Là Danh mục Cha)</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem
-                          key={cat.id}
-                          value={cat.id.toString()}
-                          disabled={editingCategoryId === cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="description" className="text-right">
-                    Mô tả
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="col-span-3"
-                    rows={3}
-                  />
-                </div>
+                    <InputSectionWithForm
+                      form={form}
+                      nameFormField="slug"
+                      loading={false}
+                      title={"Vui lòng nhập slug"}
+                      placeholder={"Vui lòng nhập slug"}
+                    />
+
+                    <ImageUploadSection
+                      form={form}
+                      loading={false}
+                      nameFormField="imageUrl"
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="variant"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Biến thể</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn danh mục cha" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.values(CategoryVariant).map((variant) => (
+                                <SelectItem key={variant} value={variant}>
+                                  {CategoryVariantLabels[variant]}
+                                </SelectItem>
+                              ))}
+                              {/* <SelectItem value="0">
+                                Không (Là Danh mục Cha)
+                              </SelectItem>
+                              {categories.map((cat) => (
+                                <SelectItem
+                                  key={cat.id}
+                                  value={cat.id.toString()}
+                                  disabled={editingCategoryId === cat.id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))} */}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="parentId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Danh mục cha</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Chọn danh mục cha" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="0">
+                                Không (Là Danh mục Cha)
+                              </SelectItem>
+                              {categories.map((cat) => (
+                                <SelectItem
+                                  key={cat.id}
+                                  value={cat.id.toString()}
+                                  disabled={editingCategoryId === cat.id}>
+                                  {cat.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <TextAreaSectionWithForm
+                      form={form}
+                      loading={false}
+                      nameFormField="description"
+                      title="Mô tả"
+                      placeholder="Vui lòng nhập mô tả danh mục"
+                    />
+
+                    <DialogFooter className="flex-shrink-0 pt-6 mt-6 border-t">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          resetForm();
+                          setIsDialogOpen(false);
+                        }}>
+                        Hủy
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={form.formState.isSubmitting}>
+                        {form.formState.isSubmitting
+                          ? "Đang xử lý..."
+                          : editingCategoryId
+                          ? "Lưu thay đổi"
+                          : "Tạo mới"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
               </div>
-              <DialogFooter>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    resetForm();
-                    setIsDialogOpen(false);
-                  }}>
-                  Cancel
-                </Button>
-                <Button
-                  onClick={
-                    editingCategoryId
-                      ? handleUpdateCategory
-                      : handleCreateCategory
-                  }>
-                  {editingCategoryId ? "Lưu thay đổi" : "Tạo mới"}
-                </Button>
-              </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardHeader>
@@ -423,7 +531,7 @@ export default function CategoriesManagement() {
             <div className="flex items-center mb-4">
               <FolderTree className="h-5 w-5 mr-2" />
               <h2 className="text-base font-semibold">
-                Thông tin tất cả danh mục{" "}
+                Thông tin tất cả danh mục
               </h2>
             </div>
 
@@ -432,7 +540,7 @@ export default function CategoriesManagement() {
                 renderCategoryTree(categoryTree)
               ) : (
                 <p className="text-gray-500">
-                  Chưa có danh mục nào hãy thêm 1 danh mục !!{" "}
+                  Chưa có danh mục nào hãy thêm 1 danh mục !!
                 </p>
               )}
             </div>

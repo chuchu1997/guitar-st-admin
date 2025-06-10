@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback } from "react";
-import { Button } from "./button";
+import { Button } from "../button";
 import { 
   Trash2, 
   Upload, 
@@ -20,23 +20,49 @@ export interface TempImage {
   url: string;
 }
 
+// Updated interface with conditional types
 interface ImageUploadProps {
   disabled?: boolean;
-  onChange: (images: TempImage[]) => void;
   onRemove?: (previewUrl: string) => void;
-  value: TempImage[];
   isMultiple?: boolean;
   maxFiles?: number;
   maxFileSize?: number; // in MB
   acceptedFormats?: string[];
-
+  // Conditional typing for onChange and value based on isMultiple
+  onChange: (images: TempImage[] | TempImage) => void;
+  value: TempImage[] | TempImage;
 }
 
-const ImageUpload: React.FC<ImageUploadProps> = ({
+// Alternative approach with overloads for better type safety
+interface ImageUploadMultipleProps {
+  disabled?: boolean;
+  onChange: (images: TempImage[]) => void;
+  onRemove?: (previewUrl: string) => void;
+  value: TempImage[];
+  isMultiple: true;
+  maxFiles?: number;
+  maxFileSize?: number;
+  acceptedFormats?: string[];
+}
+
+interface ImageUploadSingleProps {
+  disabled?: boolean;
+  onChange: (image: TempImage | null) => void;
+  onRemove?: (previewUrl: string) => void;
+  value: TempImage | null;
+  isMultiple?: false;
+  maxFiles?: number;
+  maxFileSize?: number;
+  acceptedFormats?: string[];
+}
+
+type ImageUploadPropsTyped = ImageUploadMultipleProps | ImageUploadSingleProps;
+
+const ImageUpload: React.FC<ImageUploadPropsTyped> = ({
   disabled = false,
   onChange,
   onRemove,
-  value = [],
+  value,
   isMultiple = false,
   maxFiles = 10,
   maxFileSize = 5,
@@ -46,6 +72,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Normalize value to always work with arrays internally
+  const normalizedValue: TempImage[] = isMultiple 
+    ? (value as TempImage[]) || []
+    : (value as TempImage | null) ? [value as TempImage] : [];
 
   const validateFiles = useCallback((files: FileList | File[]): { valid: File[]; errors: string[] } => {
     const fileArray = Array.from(files);
@@ -66,8 +97,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       }
 
       // Check max files limit
-      if (isMultiple && value.length + valid.length >= maxFiles) {
+      if (isMultiple && normalizedValue.length + valid.length >= maxFiles) {
         errors.push(`Chỉ được tải lên tối đa ${maxFiles} ảnh`);
+        break;
+      }
+
+      // For single upload, only allow one file
+      if (!isMultiple && valid.length >= 1) {
+        errors.push(`Chỉ được tải lên một ảnh`);
         break;
       }
 
@@ -75,7 +112,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     }
 
     return { valid, errors };
-  }, [acceptedFormats, maxFileSize, maxFiles, isMultiple, value.length]);
+  }, [acceptedFormats, maxFileSize, maxFiles, isMultiple, normalizedValue.length]);
 
   const processFiles = useCallback(async (files: FileList | File[]) => {
     setIsProcessing(true);
@@ -100,11 +137,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       url: URL.createObjectURL(file),
     }));
 
-    const updatedImages = isMultiple ? [...value, ...previews] : previews;
-    onChange(updatedImages);
+    if (isMultiple) {
+      const updatedImages = [...normalizedValue, ...previews];
+      (onChange as (images: TempImage[]) => void)(updatedImages);
+    } else {
+      // For single upload, take only the first image
+      (onChange as (image: TempImage | null) => void)(previews[0] || null);
+    }
+    
     setUploadError(null);
     setIsProcessing(false);
-  }, [validateFiles, isMultiple, value, onChange]);
+  }, [validateFiles, isMultiple, normalizedValue, onChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -140,8 +183,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     // Revoke object URL to prevent memory leaks
     URL.revokeObjectURL(previewUrl);
     
-    const filtered = value.filter((img) => img.url !== previewUrl);
-    onChange(filtered);
+    if (isMultiple) {
+      const filtered = normalizedValue.filter((img) => img.url !== previewUrl);
+      (onChange as (images: TempImage[]) => void)(filtered);
+    } else {
+      (onChange as (image: TempImage | null) => void)(null);
+    }
+    
     if (onRemove) onRemove(previewUrl);
   };
 
@@ -169,7 +217,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             : "border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-gradient-to-br hover:from-slate-50 hover:to-blue-50 dark:hover:from-slate-800/50 dark:hover:to-blue-950/20"
           }
           ${disabled || isProcessing ? "opacity-50 cursor-not-allowed pointer-events-none" : "hover:scale-102"}
-          ${value.length > 0 ? "p-6" : "p-8"}
+          ${normalizedValue.length > 0 ? "p-6" : "p-8"}
         `}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
@@ -216,6 +264,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   <span className="block">Hỗ trợ: {getFormatDisplayText()}</span>
                   <span className="block">Tối đa {maxFileSize}MB mỗi ảnh
                     {isMultiple && ` • Tối đa ${maxFiles} ảnh`}
+                    {!isMultiple && ` • Chỉ một ảnh`}
                   </span>
                 </p>
               </div>
@@ -254,15 +303,18 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       )}
 
       {/* Image Previews */}
-      {value.length > 0 && (
+      {normalizedValue.length > 0 && (
         <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600"></div>
               <h4 className="font-semibold text-slate-800 dark:text-slate-200">
-                Ảnh đã chọn ({value.length}{isMultiple ? `/${maxFiles}` : ""})
+                {isMultiple 
+                  ? `Ảnh đã chọn (${normalizedValue.length}/${maxFiles})`
+                  : "Ảnh đã chọn"
+                }
               </h4>
-              {value.length > 0 && (
+              {normalizedValue.length > 0 && (
                 <div className="flex items-center gap-1 ">
                   <Check className="w-4 h-4 text-green-500" />
                   <span className="text-sm text-green-600 dark:text-green-400 font-medium">Sẵn sàng</span>
@@ -270,7 +322,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               )}
             </div>
             
-            {isMultiple && value.length < maxFiles && (
+            {isMultiple && normalizedValue.length < maxFiles && (
               <Button
                 type="button"
                 variant="outline"
@@ -285,10 +337,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             )}
           </div>
 
-          <div   className={`${
-    isMultiple ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid grid-cols-1'
-  } gap-4`}>
-            {value.map((item, index) => (
+          <div className={`${
+            isMultiple ? 'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'grid grid-cols-1'
+          } gap-4`}>
+            {normalizedValue.map((item, index) => (
               <div
                 key={item.url}
                 className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-102"
@@ -341,21 +393,21 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
 
           {/* Quick actions */}
-          {value.length > 1 && (
+          {isMultiple && normalizedValue.length > 1 && (
             <div className="flex justify-center pt-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  value.forEach(img => URL.revokeObjectURL(img.url));
-                  onChange([]);
+                  normalizedValue.forEach(img => URL.revokeObjectURL(img.url));
+                  (onChange as (images: TempImage[]) => void)([]);
                 }}
                 disabled={disabled || isProcessing}
                 className="text-red-600 hover:bg-red-50 hover:border-red-300 dark:text-red-400 dark:hover:bg-red-950/20 transition-colors duration-200"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
-                Xóa tất cả ({value.length})
+                Xóa tất cả ({normalizedValue.length})
               </Button>
             </div>
           )}

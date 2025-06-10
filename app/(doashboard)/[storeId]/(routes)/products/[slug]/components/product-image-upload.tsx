@@ -7,7 +7,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import ImageUpload, { TempImage } from "@/components/ui/image-upload";
+import ImageUpload, {
+  TempImage,
+} from "@/components/ui/ImageUpload/image-upload";
 import { ImageInterface } from "@/types/product";
 import { Package } from "lucide-react";
 
@@ -50,23 +52,36 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
               <ImageUpload
                 isMultiple={isMultiple ?? false}
                 disabled={loading}
-                value={field.value.map((img: any) => ({
-                  file: img.file,
-                  url: img.url,
-                }))}
-                onChange={(images: any) => {
+                value={field.value} // Can be TempImage[], TempImage, or null
+                onChange={(images: TempImage[] | TempImage | null) => {
                   field.onChange(
-                    images.map((img: any) => ({
-                      file: img.file,
-                      url: img.url,
-                    }))
+                    Array.isArray(images)
+                      ? images.map((img: TempImage) => ({
+                          file: img.file,
+                          url: img.url,
+                        }))
+                      : images
+                      ? {
+                          file: images.file,
+                          url: images.url,
+                        }
+                      : undefined
                   );
                 }}
-                onRemove={(url) =>
-                  field.onChange(
-                    field.value.filter((img: any) => img.url !== url)
-                  )
-                }
+                onRemove={(url) => {
+                  const currentValue = Array.isArray(field.value)
+                    ? field.value
+                    : field.value
+                    ? [field.value]
+                    : [];
+
+                  const filtered = currentValue.filter(
+                    (img: any) => img.url !== url
+                  );
+
+                  // Nếu muốn trả về null khi không còn ảnh nào
+                  field.onChange(filtered.length > 0 ? filtered : undefined);
+                }}
               />
             </FormControl>
             <FormMessage />

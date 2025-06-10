@@ -31,14 +31,11 @@ interface BannerProps {
 
 const formSchema = z.object({
   title: z.string().optional(),
-  images: z
-    .array(
-      z.object({
-        url: z.string(),
-        file: z.instanceof(File).optional(), // <- optional ở đây
-      })
-    )
-    .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
+  images: z.object({
+    url: z.string().min(1, "Vui lòng chọn ảnh."),
+    file: z.instanceof(File).optional(), // <- optional ở đây
+  }),
+
   isActive: z.boolean(),
   link: z.string().optional(),
   position: z.coerce.number().optional(), // Hợp lệ với cả "2" và 2
@@ -63,7 +60,6 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
     resolver: zodResolver(formSchema),
     defaultValues: initialData || {
       title: "",
-      images: [],
       isActive: true,
       link: "",
       position: 1,
@@ -73,26 +69,23 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
   const onSubmit = async (data: BannersFormValues) => {
     try {
       setLoading(true);
-      const formData = new FormData();
-      const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
-      let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
-      if (data.images[0].file) {
-        formData.append("files", data.images[0].file);
+      let finalImage = data.images;
+
+      if (data.images.file) {
+        const formData = new FormData();
+        formData.append("files", data.images.file);
         const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
         if (uploadRes.status !== 200) throw new Error("Upload thất bại");
-
-        const { imageUrls } = uploadRes.data as { imageUrls: [] };
-        const uploadedImageUrls: ImageInterface[] = imageUrls.map((img) => ({
-          url: img,
-          file: undefined,
-        }));
-        finalImageUrls = [...uploadedImageUrls];
+        const { imageUrls } = uploadRes.data as { imageUrls: string[] };
+        if (imageUrls.length > 0) {
+          finalImage.file = undefined;
+          finalImage.url = imageUrls[0];
+        }
       }
-
       if (initialData) {
         let response = await BannerAPI.updateBanner(initialData.id, {
           storeId: Number(storeId),
-          imageUrl: finalImageUrls[0].url,
+          imageUrl: finalImage.url,
           title: data.title,
           link: data.link,
           isActive: data.isActive,
@@ -106,7 +99,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
       } else {
         let response = await BannerAPI.createBanner({
           storeId: Number(storeId),
-          imageUrl: finalImageUrls[0].url,
+          imageUrl: finalImage.url,
           title: data.title,
           link: data.link,
           isActive: data.isActive,
@@ -165,12 +158,10 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
         link: initialData.link ?? "",
         isActive: initialData.isActive ?? false,
         position: initialData.position ?? 1,
-        images: [
-          {
-            file: undefined,
-            url: initialData.imageUrl ?? "",
-          },
-        ],
+        images: {
+          file: undefined,
+          url: initialData.imageUrl ?? "",
+        },
       };
 
       setTimeout(() => {

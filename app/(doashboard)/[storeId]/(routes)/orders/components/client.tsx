@@ -8,21 +8,22 @@ import { useParams, useRouter } from "next/navigation";
 import { OrderColumn, columns } from "./column";
 import { DataTable } from "@/components/ui/data-table";
 import { ApiList } from "@/components/ui/api-list";
+import { useState } from "react";
 
-interface OrderClientProps {
 
-}
-export const OrderClient = (props: OrderClientProps) => {
-  const { data } = props;
+export const OrderClient = () => {
 
-  const params = useParams();
-  const router = useRouter();
+  const {storeId} = useParams();
+  const [data,setData] = useState([]);
+
+  // const params = useParams();
+  // const router = useRouter();
 
   return (
     <>
       <div className="flex items-center justify-between ">
         <Heading
-          title={`Quản lý đơn đặt hàng   (${data?.length || 0})`}
+          title={`Quản lý đơn đặt hàng   `}
           description={"Tất đơn đặt hàng  trong Store  "}
         />
         {/* <Button
@@ -35,9 +36,9 @@ export const OrderClient = (props: OrderClientProps) => {
       </div>
       <Separator />
       <DataTable searchKey="name" columns={columns} data={data}></DataTable>
-      <Heading title={"API"} description={"API Call for products"} />
-      <Separator />
-      <ApiList entityName="news" entityIdName="slug" />
+      {/* <Heading title={"API"} description={"API Call for products"} /> */}
+      {/* <Separator />
+      <ApiList entityName="news" entityIdName="slug" /> */}
     </>
   );
 };

@@ -24,7 +24,9 @@ import { useParams, useRouter } from "next/navigation";
 import { AlertModal } from "@/components/modals/alert-modal";
 
 import { useEffect, useState } from "react";
-import ImageUpload from "@/components/ui/image-upload";
+import ImageUpload, {
+  TempImage,
+} from "@/components/ui/ImageUpload/image-upload";
 
 import EditorComponent from "@/components/editor";
 import { ArticleBaseInterface, ArticleInterface } from "@/types/news";
@@ -42,13 +44,13 @@ interface NewsProps {
 const formSchema = z.object({
   title: z.string().min(1, "Bạn phải nhập tên bài viết"),
   images: z
-    .array(
-      z.object({
-        url: z.string(),
-        file: z.instanceof(File).optional(), // <- optional ở đây
-      })
-    )
-    .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
+    .object({
+      url: z.string().min(1, "Vui lòng chọn ảnh."),
+      file: z.instanceof(File).optional(),
+    })
+    .refine((val) => !!val.url, {
+      message: "Vui lòng chọn ảnh.",
+    }),
   description: z.string().min(1, "Bạn phải nhập mô tả cho bài viết"),
   slug: z.string().min(1, "Bạn phải nhập slug cho bài viết"),
 });
@@ -75,7 +77,6 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
     defaultValues: {
       title: "",
       slug: "",
-      images: [],
       description: "",
     },
   });
@@ -84,29 +85,29 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
     try {
       setLoading(true);
 
-      const formData = new FormData();
-      const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
+      // const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
 
-      let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
+      // let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
 
-      if (data.images[0].file) {
-        formData.append("files", data.images[0].file);
+      let finalImage = data.images;
+
+      if (data.images.file) {
+        const formData = new FormData();
+        formData.append("files", data.images.file);
         const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
         if (uploadRes.status !== 200) throw new Error("Upload thất bại");
-
-        const { imageUrls } = uploadRes.data as { imageUrls: [] };
-        const uploadedImageUrls: ImageInterface[] = imageUrls.map((img) => ({
-          url: img,
-          file: undefined,
-        }));
-        finalImageUrls = [...uploadedImageUrls];
+        const { imageUrls } = uploadRes.data as { imageUrls: string[] };
+        if (imageUrls.length > 0) {
+          finalImage.file = undefined;
+          finalImage.url = imageUrls[0];
+        }
       }
 
       const { title, slug, description } = data;
 
       const payload: ArticleBaseInterface = {
         storeId: Number(storeId),
-        imageUrl: finalImageUrls[0].url,
+        imageUrl: finalImage.url,
         title: title,
         slug: slug,
         description: description,
@@ -169,12 +170,10 @@ export const NewsForm: React.FC<NewsProps> = ({ initialData }) => {
     if (initialData) {
       const formData: NewsFormValues = {
         ...initialData,
-        images: [
-          {
-            file: undefined,
-            url: initialData.imageUrl ?? "",
-          },
-        ],
+        images: {
+          file: undefined,
+          url: initialData.imageUrl ?? "",
+        },
         description: initialData.description ?? "",
       };
       setTimeout(() => {
