@@ -1,6 +1,6 @@
 import { CreateStoreInterface, UpdateStoreInterface } from "@/types/store"
 import api from "../interceptor"
-import { CreateNewArticleInterface, UpdateArticleInterface,} from "@/types/news";
+import { CreateNewArticleInterface,UpdateNewArticleInterface } from "@/types/news";
 
 
 
@@ -37,7 +37,7 @@ const ArticleAPI = {
             data: data
         })
     },
-    updateArticle:async(id:number,data:UpdateArticleInterface)=>{
+    updateArticle:async(id:number,data:UpdateNewArticleInterface)=>{
         return await api({
             method:"PATCH",
             url:`${url}/${id}`,

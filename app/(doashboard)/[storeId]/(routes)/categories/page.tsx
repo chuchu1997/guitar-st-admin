@@ -138,7 +138,6 @@ export default function CategoriesManagement() {
       };
       setCategories(categories);
     }
-    console.log("RES", response);
   };
 
   const onCreateCategory = async (category: CreateCategoryInterface) => {
@@ -207,6 +206,7 @@ export default function CategoriesManagement() {
 
   // Handle form submission
   const onSubmit = async (data: CategoryFormValues) => {
+    console.log("DATA", data);
     try {
       let finalImage = data.imageUrl;
       if (data.imageUrl.file) {
@@ -228,13 +228,14 @@ export default function CategoriesManagement() {
           description: data.description,
           imageUrl: finalImage.url,
           parentId:
-            data.parentId === "0" || !data.parentId
+            data.parentId === "null" || !data.parentId
               ? null
               : Number(data.parentId),
           updatedAt: new Date(),
           storeId: Number(storeId),
           variant: data.variant ?? undefined,
         };
+        console.log("UPDATE DATA", updateData);
 
         await onUpdateCategory(editingCategoryId, updateData);
       } else {
@@ -246,7 +247,7 @@ export default function CategoriesManagement() {
           imageUrl: finalImage.url,
           description: data.description,
           parentId:
-            data.parentId === "0" || !data.parentId
+            data.parentId === "null" || !data.parentId
               ? null
               : Number(data.parentId),
           variant: data.variant ?? undefined,
@@ -428,7 +429,7 @@ export default function CategoriesManagement() {
                             value={field.value}>
                             <FormControl>
                               <SelectTrigger>
-                                <SelectValue placeholder="Chọn danh mục cha" />
+                                <SelectValue placeholder="Chọn biến thể nếu có !!" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -437,17 +438,6 @@ export default function CategoriesManagement() {
                                   {CategoryVariantLabels[variant]}
                                 </SelectItem>
                               ))}
-                              {/* <SelectItem value="0">
-                                Không (Là Danh mục Cha)
-                              </SelectItem>
-                              {categories.map((cat) => (
-                                <SelectItem
-                                  key={cat.id}
-                                  value={cat.id.toString()}
-                                  disabled={editingCategoryId === cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))} */}
                             </SelectContent>
                           </Select>
                           <FormMessage />
@@ -469,7 +459,7 @@ export default function CategoriesManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="0">
+                              <SelectItem value={"null"}>
                                 Không (Là Danh mục Cha)
                               </SelectItem>
                               {categories.map((cat) => (
