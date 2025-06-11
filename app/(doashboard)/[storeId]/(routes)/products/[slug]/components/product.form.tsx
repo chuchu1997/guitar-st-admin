@@ -308,7 +308,12 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <ImageUploadSection form={form} loading={loading} isMultiple />
+          <ImageUploadSection
+            form={form}
+            loading={loading}
+            isMultiple
+            note="Kích thước 1000x1000"
+          />
 
           <BasicInfoSection
             form={form}

@@ -2,7 +2,6 @@ import prismadb from "@/lib/primadb";
 import { OrderForm, ProductWithOrderedQuantity } from "./components/order-form";
 // import { CategoryForm } from "./components/category-form";
 // import { BillboardsForm } from "./components/billboard-form";
-import { Size, Color } from "@prisma/client";
 
 interface OrderPageProps {
   params: Promise<{ id: string; storeId: string }>;
@@ -33,10 +32,10 @@ const OrderPage = async (props: OrderPageProps) => {
   });
 
   //MAP STOCK WITH ORDER !!!
-  const productsWithOrderedQuantity: ProductWithOrderedQuantity[] = order?.orderItems.map((item) => ({
-    ...item.product,
-    orderedQuantity: item.quantity,
-  })) || [];
+  // const productsWithOrderedQuantity: ProductWithOrderedQuantity[] = order?.orderItems.map((item) => ({
+  //   ...item.product,
+  //   orderedQuantity: item.quantity,
+  // })) || [];
 
  
   return (
@@ -44,7 +43,7 @@ const OrderPage = async (props: OrderPageProps) => {
       <div className="flex-1 space-y-4 p-8 pt-6">
         <OrderForm
           initialData={order}
-          productOrders={productsWithOrderedQuantity}
+          productOrders={[]}
         />
       </div>
     </div>

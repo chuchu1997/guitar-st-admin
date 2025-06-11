@@ -293,14 +293,6 @@ export default function CategoriesManagement() {
   };
 
   // Auto-generate slug from name
-  const handleNameChange = (value: string) => {
-    const slugValue = value
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
-    form.setValue("slug", slugValue);
-  };
 
   // Render category tree
   const renderCategoryTree = (
@@ -317,7 +309,8 @@ export default function CategoriesManagement() {
                   depth > 0 ? "border-l-2 border-gray-200" : ""
                 }`}>
                 <div className="font-medium">
-                  Tên danh mục : {category.name}
+                  Tên danh mục :{" "}
+                  <span className="uppercase">{`( ${category.name} )`}</span>
                 </div>
                 <div className="text-sm text-gray-500">
                   Mô tả : {category.description}
@@ -332,9 +325,12 @@ export default function CategoriesManagement() {
                     </div>
                   )}
                 {category.imageUrl && (
-                  <div className="text-sm text-blue-500">
-                    Hình ảnh : {category.imageUrl}
-                  </div>
+                  <details className="text-sm text-blue-500 cursor-pointer">
+                    <summary className="text-blue-600 underline">
+                      Xem link hình ảnh
+                    </summary>
+                    <div className="mt-1">Hình ảnh: {category.imageUrl}</div>
+                  </details>
                 )}
               </div>
               <div className="flex space-x-2">

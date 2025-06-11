@@ -12,6 +12,9 @@ import StoresAPI from "@/app/api/stores/stores.api";
 import authApi from "@/app/api/auth/auth.api";
 import { Role } from "@/types/auth";
 import { UserInterface } from "@/types/user";
+import { Heading } from "@/components/ui/heading";
+import { Separator } from "@radix-ui/react-separator";
+import { ApiList } from "@/components/ui/api-list";
 
 export default function SettingsPage() {
   // const { storeId } = await params;
@@ -56,6 +59,9 @@ export default function SettingsPage() {
     <div className="flex flex-col">
       <div className="flex-1 space-y-4 p-8 pt-6">
         <SettingsForm initialData={store}></SettingsForm>
+        {/* <Heading title={"API"} description={"API Call for products"} />
+        <Separator /> */}
+        {/* <ApiList entityName="" entityIdName="slug" /> */}
       </div>
     </div>
   );

@@ -16,7 +16,7 @@ export const ApiList: React.FC<ApiListProps> = ({
   const router = useRouter();
 
   const origin = userOrigin();
-  const baseUrl = `${origin}/api/${params.storeId}`;
+  const baseUrl = `${origin}/${params.storeId}`;
 
   return (
     <div className = "overflow-hidden">
@@ -26,7 +26,7 @@ export const ApiList: React.FC<ApiListProps> = ({
         description={`${baseUrl}/${entityName}`}
       ></ApiAlert>
 
-      <ApiAlert
+      {/* <ApiAlert
         title="GET"
         variant="public"
         description={`${baseUrl}/${entityName}/${entityIdName}`}
@@ -45,7 +45,7 @@ export const ApiList: React.FC<ApiListProps> = ({
         title="DELETE"
         variant="admin"
         description={`${baseUrl}/${entityName}/${entityIdName}`}
-      ></ApiAlert>
+      ></ApiAlert> */}
     </div>
   );
 };
