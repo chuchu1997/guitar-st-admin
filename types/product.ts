@@ -13,7 +13,7 @@ interface ProductBase {
     name:string;
     description:string;
     price:number;
-    oldPrice?:number;
+    originalPrice?:number;
 
     isFeatured:boolean;
     slug:string;

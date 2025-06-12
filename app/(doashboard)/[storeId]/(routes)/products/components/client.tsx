@@ -18,12 +18,14 @@ export const ProductClient = () => {
   const { storeId } = useParams();
   const router = useRouter();
   const [productColumns, setProductColumns] = useState<ProductInterface[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+
   const [totalProduct, setTotalProduct] = useState<number>(1);
 
   const getListProductsRelateWithStoreID = async () => {
     if (storeId) {
       let response = await ProductAPI.getListProducts({
-        currentPage: 1,
+        currentPage: currentPage,
         storeID: parseInt(storeId.toString()),
       });
       if (response.status === 200) {
@@ -41,7 +43,7 @@ export const ProductClient = () => {
   };
   useEffect(() => {
     getListProductsRelateWithStoreID();
-  }, []);
+  }, [currentPage]);
 
   return (
     <>
@@ -59,11 +61,17 @@ export const ProductClient = () => {
       </div>
       <Separator />
       <DataTable
+        currentPage={currentPage}
+        onPageChange={async (page: number) => {
+          setCurrentPage(page);
+        }}
+        totalItems={totalProduct}
         searchKey="name"
         columns={columns}
         data={productColumns}></DataTable>
-      <Heading title={"API"} description={"API Call for products"} />
+
       <Separator />
+
       {/* <ApiList entityName="products" entityIdName="slug" /> */}
     </>
   );

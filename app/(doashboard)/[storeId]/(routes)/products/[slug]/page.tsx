@@ -25,7 +25,6 @@ const ProductPage =  () => {
        if(response.status === 200){
         const {product} = response.data as {product:ProductInterface}
         setProductData(product)
-    
        }
     }
   }
