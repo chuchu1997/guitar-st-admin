@@ -27,10 +27,20 @@ import { SettingsSection } from "./product-setting";
 import { Button } from "@/components/ui/button";
 import ProductAPI from "@/app/api/products/products.api";
 import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import { GiftProductSelector } from "./product-gifts";
+
+export const giftSchema = z.object({
+  id: z.number(),
+  slug: z.string().optional(),
+});
+
+export type GiftProduct = z.infer<typeof giftSchema>;
 
 const formSchema = z.object({
+  id: z.number().optional(), //
   name: z.string().min(1, "Tên sản phẩm là bắt buộc"),
   categoryId: z.string().min(1, "Vui lòng chọn danh mục"),
+  originalPrice: z.coerce.number().optional(),
   price: z.coerce.number().min(1, "Giá phải lớn hơn 0"),
   images: z
     .array(
@@ -48,6 +58,7 @@ const formSchema = z.object({
   // Required colors selection
   viewCount: z.coerce.number().default(0).optional(),
   ratingCount: z.coerce.number().default(5).optional(),
+  giftProducts: z.array(giftSchema).optional(),
 });
 interface ProductProps {
   initialData: (ProductInterface & {}) | null;
@@ -56,6 +67,7 @@ type ProductFormValues = z.infer<typeof formSchema>;
 
 export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const { storeId } = useParams();
+  const [mounted, setIsMounted] = useState(false);
 
   const mockColors: ProductColorInterface[] = [
     { id: 1, name: "Đỏ", hex: "#FF0000", price: 100000, stock: 50 },
@@ -64,11 +76,21 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   ];
 
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
+  // const formData: ProductFormValues = {
+  //       ...initialData,
+  //       id: initialData.id ?? null,
+  //       // const currentProductID = initialData?.id ?? null;
+
+  //       originalPrice: initialData.originalPrice ?? 0,
+  //       categoryId: initialData.categoryId.toString(),
+  //     };
+
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       categoryId: "",
+      originalPrice: 0,
       price: 0,
       images: [],
       isFeatured: false,
@@ -78,8 +100,10 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       stock: 0,
       viewCount: 0,
       ratingCount: 5,
+      giftProducts: [],
     },
   });
+
   const [selectedColors, setSelectedColors] = useState<ProductColorInterface[]>(
     []
   );
@@ -171,9 +195,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       }
 
       const {
+        giftProducts,
         name,
         description,
         price,
+        originalPrice,
         isFeatured = false,
         slug,
         stock,
@@ -203,6 +229,8 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         description,
         price,
         isFeatured,
+        originalPrice,
+        giftProducts,
         slug,
         stock,
         sku,
@@ -212,7 +240,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         colors: cleanedColors, // 👈 cleaned colors
         sizes: cleanedSizes, // 👈 cleaned sizes
       };
-
+      console.log("PAYLOAD", payload);
       const res = initialData
         ? await ProductAPI.updateProduct(initialData.id, {
             ...payload,
@@ -234,11 +262,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
     }
   };
   useEffect(() => {
-    console.log("Errors:", form.formState.errors);
-
     // Ví dụ: kiểm tra lỗi cụ thể
+    console.log("FORM ERROR", form.formState.errors);
   }, [form.formState.errors]);
   useEffect(() => {
+    setIsMounted(true);
     fetchCategoriesAndResetForm(); // chỉ gọi khi có dữ liệu
   }, [initialData]);
 
@@ -270,23 +298,29 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         }, 1500);
         return; // thoát sớm nếu không có danh mục
       }
-
       // Reset form sau khi có danh sách danh mục
       if (initialData) {
-        const formData: ProductFormValues = {
+        const formattedData: ProductFormValues = {
           ...initialData,
           categoryId: initialData.categoryId.toString(),
+          originalPrice: initialData.originalPrice ?? 0,
         };
 
+        if (initialData.colors?.length > 0) {
+          setSelectedColors(initialData.colors);
+        }
+
+        if (initialData.sizes?.length > 0) {
+          setSelectedSizes(initialData.sizes);
+        }
+
+        form.reset(formattedData); // ✅ reset sau khi có data
         if (initialData.colors.length > 0) {
           setSelectedColors(initialData.colors);
         }
         if (initialData.sizes.length > 0) {
           setSelectedSizes(initialData.sizes);
         }
-        setTimeout(() => {
-          form.reset(formData);
-        }, 500);
       }
     } catch (error) {
       toast.error("Lỗi khi tải danh mục, vui lòng thử lại.");
@@ -295,6 +329,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       setLoading(false);
     }
   };
+
+  if (!mounted) {
+    return <>... Đang tải </>;
+  }
+
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-8">
       <div className="text-center mb-8">
@@ -304,6 +343,15 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         <p className="text-gray-600">
           Điền thông tin chi tiết để tạo sản phẩm mới
         </p>
+
+        {initialData && (
+          <div className="bg-gray-50 rounded-lg p-4 my-4">
+            <p className="text-sm text-gray-600">
+              Sản phẩm hiện tại: <strong>{initialData.name}</strong>
+            </p>
+            <p className="text-xs text-gray-500 mt-1">ID: {initialData.id}</p>
+          </div>
+        )}
       </div>
 
       <Form {...form}>
@@ -358,6 +406,11 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
               });
             }}
             onUpdateVariant={handleUpdateSize}
+          />
+          <GiftProductSelector
+            form={form}
+            loading={loading}
+            initValue={initialData?.giftProducts ?? []}
           />
 
           <SettingsSection form={form} loading={loading} />

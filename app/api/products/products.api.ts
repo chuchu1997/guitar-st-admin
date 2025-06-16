@@ -10,22 +10,24 @@ export interface GetProductDTO  {
     limit?:number;
     currentPage?:number;
     slug?:string;
+    name?:string;
     categoryId?:number
 
 }
 const ProductAPI = {
-    getListProducts: async({storeID,isFeatured = false , limit = 4 , currentPage = 1,slug}:GetProductDTO)=>{
+    getListProducts: async({storeID,isFeatured = false , limit = 4 , currentPage = 1,slug,name,}:GetProductDTO)=>{
         return await api({
             method:"GET",
             url:url,
             params:{
+                name,
+               
                 storeID,
                 isFeatured,
                 limit,
                 currentPage,
                 slug
             }
-
         })
     },
     

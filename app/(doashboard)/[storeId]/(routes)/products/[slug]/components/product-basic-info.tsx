@@ -133,6 +133,34 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
 
       <FormField
         control={form.control}
+        name="originalPrice"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Giá cũ </FormLabel>
+            <FormControl>
+              <NumericFormat
+                thousandSeparator="."
+                decimalSeparator=","
+                suffix=" ₫"
+                allowNegative={false}
+                placeholder="299.000 ₫"
+                disabled={loading}
+                customInput={Input}
+                className="focus:ring-2 focus:ring-blue-500"
+                value={field.value}
+                onValueChange={(values) => {
+                  field.onChange(values.floatValue); // Lưu số thật, không phải chuỗi
+                }}
+              />
+            </FormControl>
+            <FormDescription>Giá bán cơ bản (VNĐ)</FormDescription>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={form.control}
         name="price"
         render={({ field }) => (
           <FormItem>
