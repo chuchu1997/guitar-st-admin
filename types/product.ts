@@ -12,6 +12,8 @@ export interface ImageInterface {
 interface ProductBase { 
     name:string;
     description:string;
+    shortDescription:string;
+    
     price:number;
     originalPrice?:number;
 

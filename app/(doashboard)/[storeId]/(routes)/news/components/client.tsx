@@ -17,7 +17,9 @@ import ArticleAPI from "@/app/api/articles/article.api";
 export const NewsClient = () => {
   const { storeId } = useParams();
   const [news, setNews] = useState<ArticleInterface[]>([]);
-  const [totalNews, setTotalNews] = useState<number>(0);
+  const [totalNews, setTotalNews] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+
   const router = useRouter();
 
   useEffect(() => {
@@ -30,7 +32,6 @@ export const NewsClient = () => {
         currentPage: 1,
       });
       if (response.status === 200) {
-        console.log("DATA", response.data);
         const { articles, total } = response.data as {
           articles: ArticleInterface[];
           total: number;
@@ -58,7 +59,15 @@ export const NewsClient = () => {
         </Button>
       </div>
       <Separator />
-      <DataTable searchKey="name" columns={columns} data={news}></DataTable>
+      <DataTable
+        searchKey="name"
+        columns={columns}
+        data={news}
+        onPageChange={async (page) => {
+          setCurrentPage(page);
+        }}
+        totalItems={totalNews}
+        currentPage={currentPage}></DataTable>
       {/* <Heading title={"API"} description={"API Call for products"} />
       <Separator />
       <ApiList entityName="news" entityIdName="slug" /> */}

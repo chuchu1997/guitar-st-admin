@@ -22,8 +22,10 @@ const ProductPage =  () => {
   const getProductBySlug = async ()=>{
     if(slug){
        const response = await ProductAPI.getProductBySlug(slug.toString())
+
        if(response.status === 200){
         const {product} = response.data as {product:ProductInterface}
+        console.log("PORODUCT",product)
         setProductData(product)
        }
     }

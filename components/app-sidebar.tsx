@@ -17,6 +17,7 @@ import {
   ShoppingBagIcon,
   LayersIcon,
   User2Icon,
+  DiamondPercent,
 } from "lucide-react";
 
 import {
@@ -95,6 +96,13 @@ export function AppSidebar() {
         label: "Quản lý Banner",
         icon: FileImageIcon,
         active: pathname === `/${params.storeId}/banners`,
+      },
+
+      {
+        href: `/${params.storeId}/promotions`,
+        label: "Khuyến mãi (Flash Sale)",
+        icon: DiamondPercent,
+        active: pathname === `/${params.storeId}/promotions`,
       },
       // {
       //   href: `/${params.storeId}/sizes`,

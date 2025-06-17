@@ -26,7 +26,7 @@ export const ProductClient = () => {
     if (storeId) {
       let response = await ProductAPI.getListProducts({
         currentPage: currentPage,
-        storeID: parseInt(storeId.toString()),
+        storeID: Number(storeId),
       });
       if (response.status === 200) {
         const { products, total } = response.data as {

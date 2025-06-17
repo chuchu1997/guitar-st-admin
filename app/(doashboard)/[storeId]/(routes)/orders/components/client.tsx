@@ -14,7 +14,12 @@ import { useState } from "react";
 export const OrderClient = () => {
 
   const {storeId} = useParams();
-  const [data,setData] = useState([]);
+  const [orders,setOrders] = useState([]);
+  const [totalOrders,setTotalOrders] = useState<number>(1);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+
+
+
 
   // const params = useParams();
   // const router = useRouter();
@@ -35,7 +40,12 @@ export const OrderClient = () => {
         </Button> */}
       </div>
       <Separator />
-      <DataTable searchKey="name" columns={columns} data={data}></DataTable>
+      <DataTable searchKey="name" columns={columns} data={orders} totalItems={totalOrders} currentPage={currentPage} 
+      onPageChange={async(page)=>{
+        setCurrentPage(page)
+      }}
+      
+      ></DataTable>
       {/* <Heading title={"API"} description={"API Call for products"} /> */}
       {/* <Separator />
       <ApiList entityName="news" entityIdName="slug" /> */}

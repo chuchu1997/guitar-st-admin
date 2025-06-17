@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Tag } from "lucide-react";
 import { NumericFormat } from "react-number-format";
+import { Textarea } from "@/components/ui/textarea";
 
 interface BasicInfoSectionProps {
   form: any;
@@ -59,30 +60,20 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
           </FormItem>
         )}
       />
-
       <FormField
         control={form.control}
-        name="categoryId"
+        name="shortDescription"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Danh mục *</FormLabel>
-            <Select
-              disabled={loading}
-              onValueChange={field.onChange}
-              value={field.value}>
-              <FormControl>
-                <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
-                  <SelectValue placeholder="Chọn danh mục" />
-                </SelectTrigger>
-              </FormControl>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id.toString()}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <FormLabel>Mô tả ngắn *</FormLabel>
+            <FormControl>
+              <Textarea
+                disabled={loading}
+                {...field}
+                placeholder="Nhập mô tả ngắn "
+                className="focus:ring-2 focus:ring-blue-500"
+              />
+            </FormControl>
             <FormMessage />
           </FormItem>
         )}
@@ -202,6 +193,33 @@ export const BasicInfoSection: React.FC<BasicInfoSectionProps> = ({
                 className="focus:ring-2 focus:ring-blue-500"
               />
             </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+      <FormField
+        control={form.control}
+        name="categoryId"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Danh mục *</FormLabel>
+            <Select
+              disabled={loading}
+              onValueChange={field.onChange}
+              value={field.value}>
+              <FormControl>
+                <SelectTrigger className="focus:ring-2 focus:ring-blue-500">
+                  <SelectValue placeholder="Chọn danh mục" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id.toString()}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <FormMessage />
           </FormItem>
         )}

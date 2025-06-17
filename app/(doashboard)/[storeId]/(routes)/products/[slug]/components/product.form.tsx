@@ -52,6 +52,7 @@ const formSchema = z.object({
     .min(1, "Bạn phải chọn ít nhất 1 ảnh"),
   isFeatured: z.boolean().default(false).optional(),
   description: z.string().min(1, "Mô tả sản phẩm là bắt buộc"),
+  shortDescription: z.string().min(1, "Mô tả ngắn là bắt buộc"),
   slug: z.string().min(1, "Slug là bắt buộc"),
   sku: z.string().min(1, "SKU là bắt buộc"),
   stock: z.coerce.number().min(0, "Số lượng không được âm"),
@@ -68,12 +69,6 @@ type ProductFormValues = z.infer<typeof formSchema>;
 export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const { storeId } = useParams();
   const [mounted, setIsMounted] = useState(false);
-
-  const mockColors: ProductColorInterface[] = [
-    { id: 1, name: "Đỏ", hex: "#FF0000", price: 100000, stock: 50 },
-    { id: 2, name: "Xanh", hex: "#0000FF", price: 120000, stock: 30 },
-    { id: 3, name: "Vàng", hex: "#FFFF00", price: 90000, stock: 20 },
-  ];
 
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
   // const formData: ProductFormValues = {
@@ -205,6 +200,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         stock,
         sku,
         categoryId,
+        shortDescription,
       } = data;
 
       const cleanedColors = selectedColors.map((color) => {
@@ -226,6 +222,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
       const payload = {
         name,
+        shortDescription,
         description,
         price,
         isFeatured,
@@ -240,7 +237,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         colors: cleanedColors, // 👈 cleaned colors
         sizes: cleanedSizes, // 👈 cleaned sizes
       };
-      console.log("PAYLOAD", payload);
+
       const res = initialData
         ? await ProductAPI.updateProduct(initialData.id, {
             ...payload,
