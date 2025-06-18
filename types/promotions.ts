@@ -30,7 +30,8 @@ export interface PromotionTypeBase {
   createdAt?: Date;
 }
 export interface ProductPromotion {
-  id: number;
+  promotionId?: number;
+  productId?: number;
   discountType: discountTypeEnum;
   discount: number;
   product: ProductInterface;

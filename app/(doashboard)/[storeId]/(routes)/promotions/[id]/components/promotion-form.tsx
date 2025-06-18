@@ -51,7 +51,6 @@ interface PromotionProps {
   initialData: PromotionType | null;
 }
 export const promotionProductSchema = z.object({
-  id: z.number(),
   discountType: z.nativeEnum(discountTypeEnum),
   discount: z.number().min(0, "Giá trị giảm giá phải lớn hơn hoặc bằng 0"),
   product: z.any().optional(), // Hoặc z.custom<ProductInterface>().optional() nếu muốn validate kỹ hơn

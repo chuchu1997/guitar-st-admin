@@ -279,7 +279,7 @@ export const ProductPromotionSelector: React.FC<
       //FIXME://
       setCurrentIDS((prev) => [
         ...prev,
-        ...promotionProducts.map((value) => value.id ?? ""),
+        ...promotionProducts.map((value) => value ?? ""),
       ]);
 
       setSelectedPromotionProducts(promotionProducts);
