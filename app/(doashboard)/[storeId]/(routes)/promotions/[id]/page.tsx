@@ -8,7 +8,7 @@ import ArticleAPI from "@/app/api/articles/article.api";
 import { PromotionType } from "@/types/promotions";
 import { PromotionAPI } from "@/app/api/promotions/promotion.api";
 
-const NewPage = () => {
+const PromotionPage = () => {
   const param = useParams();
 
   const { id, storeId } = useParams();
@@ -23,6 +23,7 @@ const NewPage = () => {
     console.log("PARAMS", param);
     if (id && id !== "new") {
       let response = await PromotionAPI.getPromotionByID(Number(id));
+      setInitialData(response.data);
       console.log("RESPONSE", response);
       // CAN GET WITH SLUG
       // let response = await ArticleAPI.getArticlesWithStoreID({
@@ -51,4 +52,4 @@ const NewPage = () => {
   );
 };
 
-export default NewPage;
+export default PromotionPage;

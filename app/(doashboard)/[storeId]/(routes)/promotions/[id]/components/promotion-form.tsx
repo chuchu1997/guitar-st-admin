@@ -40,15 +40,18 @@ import { SettingsSection } from "../../../products/[slug]/components/product-set
 import { ProductPromotionSelector } from "../../../products/[slug]/components/product-promotion-select";
 import { Calendar24 } from "@/components/ui/date/date-picker";
 import { CalendarWithForm } from "@/components/ui/date/date-form";
-import { CreatePromotionInterface, discountTypeEnum } from "@/types/promotions";
+import {
+  CreatePromotionInterface,
+  discountTypeEnum,
+  PromotionType,
+} from "@/types/promotions";
 import { PromotionAPI } from "@/app/api/promotions/promotion.api";
 
 interface PromotionProps {
-  initialData: any | null;
+  initialData: PromotionType | null;
 }
 export const promotionProductSchema = z.object({
   id: z.number(),
-  slug: z.string().optional(),
   discountType: z.nativeEnum(discountTypeEnum),
   discount: z.number().min(0, "Giá trị giảm giá phải lớn hơn hoặc bằng 0"),
   product: z.any().optional(), // Hoặc z.custom<ProductInterface>().optional() nếu muốn validate kỹ hơn
@@ -62,7 +65,6 @@ export type PromotionProduct = z.infer<typeof promotionProductSchema>;
 const formSchema = z
   .object({
     name: z.string().min(1, "Bạn phải nhập tên chương trình"),
-    slug: z.string().min(1, "Bạn phải nhập slug cho chương trình"),
     isActive: z.boolean().default(false).optional(),
     promotionProducts: z.array(promotionProductSchema).optional(),
     startDate: z.date(),
@@ -73,7 +75,7 @@ const formSchema = z
     path: ["endDate"],
   });
 
-type NewsFormValues = z.infer<typeof formSchema>;
+type PromotionFormValues = z.infer<typeof formSchema>;
 
 export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
   const { slug, storeId } = useParams();
@@ -90,11 +92,10 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
 
   const [isMounted, setIsMounted] = useState(false);
 
-  const form = useForm<NewsFormValues>({
+  const form = useForm<PromotionFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
-      slug: "",
       promotionProducts: [],
       isActive: false,
       startDate: new Date(),
@@ -102,7 +103,7 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
     },
   });
 
-  const onSubmit = async (data: NewsFormValues) => {
+  const onSubmit = async (data: PromotionFormValues) => {
     try {
       setLoading(true);
 
@@ -115,7 +116,6 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
         ...data,
         promotionProducts: data.promotionProducts?.map((item) => ({
           ...item,
-          slug: item.slug ?? "", // Ensure slug is always a string
           product: item.product ?? {}, // Ensure product is always present (replace {} with a sensible default if needed)
         })),
       };
@@ -189,13 +189,20 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
   }, []);
   useEffect(() => {
     if (initialData) {
-      const formData: NewsFormValues = {
+      const formData: PromotionFormValues = {
         ...initialData,
-        images: {
-          file: undefined,
-          url: initialData.imageUrl ?? "",
-        },
-        description: initialData.description ?? "",
+        startDate: new Date(),
+        endDate: new Date(),
+        name:
+          typeof initialData.name === "string"
+            ? initialData.name
+            : String(initialData.name),
+
+        isActive:
+          typeof initialData.isActive === "boolean"
+            ? initialData.isActive
+            : Boolean(initialData.isActive),
+        // Optionally, ensure promotionProducts is correct type if needed
       };
       setTimeout(() => {
         form.reset(formData);
@@ -239,13 +246,6 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
               nameFormField="name"
               placeholder="Nhập Tên của chương trình khuyến mãi "
               title="Tên của chương trình khuyến mãi "
-              loading={loading}
-            />
-            <InputSectionWithForm
-              form={form}
-              nameFormField="slug"
-              placeholder="Nhập Slug Vào"
-              title="Slug Cho Website"
               loading={loading}
             />
 

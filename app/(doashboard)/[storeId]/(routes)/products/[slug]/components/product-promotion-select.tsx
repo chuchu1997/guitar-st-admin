@@ -221,9 +221,9 @@ export const ProductPromotionSelector: React.FC<
     PromotionProduct[]
   >([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const { storeId, slug } = useParams();
-  const [currentSlugs, setCurrentSlugs] = useState<string[]>(
-    slug ? [slug.toString()] : []
+  const { storeId, id } = useParams();
+  const [currentIDS, setCurrentIDS] = useState<number[]>(
+    id ? [Number(id)] : []
   );
 
   // Dialog state
@@ -242,7 +242,7 @@ export const ProductPromotionSelector: React.FC<
         fetchListProducts("");
       }
     }, 300),
-    [currentSlugs, searchTerm]
+    [currentIDS, searchTerm]
   );
 
   const fetchListProducts = async (name: string) => {
@@ -253,31 +253,42 @@ export const ProductPromotionSelector: React.FC<
 
     if (response.status === 200) {
       let data = response.data.products.filter(
-        (product: ProductInterface) => !currentSlugs.includes(product.slug)
+        (product: ProductInterface) => !currentIDS.includes(product.id)
       );
       setAvailableProducts(data);
     }
   };
 
   // Initialize selected products
-  useEffect(() => {
-    if (initValue) {
-      let promotionProducts: PromotionProduct[] = initValue.map((value) => ({
-        id: value.id,
-        slug: value.slug,
-        discountType: value.discountType,
-        discount: value.discountValue,
-        product: value.product,
-      })) as PromotionProduct[];
 
-      setCurrentSlugs((prev) => [
+  useEffect(() => {
+    const currentSelection: PromotionProduct[] = form.getValues(name) || [];
+    console.log("CC", currentSelection);
+    if (currentSelection && currentSelection.length > 0) {
+      let s = 1;
+
+      let promotionProducts: PromotionProduct[] = currentSelection.map(
+        (value) => ({
+          id: ++s,
+
+          discountType: value.discountType,
+          discount: value.discount,
+          product: value.product,
+        })
+      ) as PromotionProduct[];
+      //FIXME://
+      setCurrentIDS((prev) => [
         ...prev,
-        ...promotionProducts.map((value) => value.slug ?? ""),
+        ...promotionProducts.map((value) => value.id ?? ""),
       ]);
 
       setSelectedPromotionProducts(promotionProducts);
     }
-  }, [initValue]);
+  }, [form.watch(name)]);
+
+  useEffect(() => {
+    console.log("SELCET", selectedPromotionProducts);
+  }, [selectedPromotionProducts]);
 
   // Handle click outside dropdown
   useEffect(() => {
@@ -323,7 +334,7 @@ export const ProductPromotionSelector: React.FC<
     const currentSelection: PromotionProduct[] = form.getValues(name) || [];
     const newPromotionProduct: PromotionProduct = {
       id: selectedProduct.id,
-      slug: selectedProduct.slug,
+
       discountType,
       discount,
       product: selectedProduct,
@@ -336,7 +347,7 @@ export const ProductPromotionSelector: React.FC<
 
     form.setValue(name, newSelection);
     setSelectedPromotionProducts((prev) => [...prev, newPromotionProduct]);
-    setCurrentSlugs((prev) => [...prev, selectedProduct.slug]);
+    setCurrentIDS((prev) => [...prev, selectedProduct.id]);
     setSearchTerm("");
     setSelectedProduct(null);
   };
@@ -351,9 +362,10 @@ export const ProductPromotionSelector: React.FC<
       selectedPromotionProducts.filter((item) => item.id !== productId);
 
     setSelectedPromotionProducts(newSelectedProducts);
-    setCurrentSlugs((prev) =>
+    setCurrentIDS((prev) =>
       prev.filter(
-        (s) => s === slug || newSelectedProducts.some((item) => item.slug === s)
+        (s) =>
+          s === Number(id) || newSelectedProducts.some((item) => item.id === s)
       )
     );
 

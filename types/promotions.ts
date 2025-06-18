@@ -34,7 +34,6 @@ export interface ProductPromotion {
   discountType: discountTypeEnum;
   discount: number;
   product: ProductInterface;
-  slug: string;
 }
 
 export interface PromotionType extends PromotionTypeBase {
