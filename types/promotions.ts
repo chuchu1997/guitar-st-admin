@@ -14,14 +14,36 @@ import { ProductInterface } from "./product";
 //   url: String; // URL của đối tượng (Product, Category, Blog)
 // }
 
-export interface PromotionType {
-  id: number;
-  name: String;
+export enum discountTypeEnum {
+  PERCENT = "PERCENT",
+  FIXED = "FIXED",
+}
 
+export interface PromotionTypeBase {
+  name: String;
+  slug: String;
   isActive: Boolean;
-  products: ProductInterface[];
-  discountValue: Number; // Percentage (0-100) or fixed amount
+  promotionProducts: ProductPromotion[];
   startDate: Date;
   endDate: Date;
+  storeId: number;
   createdAt?: Date;
+}
+export interface ProductPromotion {
+  id: number;
+  discountType: discountTypeEnum;
+  discount: number;
+  product: ProductInterface;
+  slug: string;
+}
+
+export interface PromotionType extends PromotionTypeBase {
+  id: number;
+}
+
+export interface CreatePromotionInterface
+  extends Partial<Omit<PromotionTypeBase, "createdAt" | "updatedAt">> {}
+export interface UpdatePromotionInterface
+  extends Partial<Omit<PromotionType, "id">> {
+  updatedAt: Date;
 }

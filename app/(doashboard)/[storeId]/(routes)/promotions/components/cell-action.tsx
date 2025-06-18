@@ -27,7 +27,8 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
     toast.success("Copy News ID Thành Công");
   };
   const onEdit = () => {
-    // router.push(`/${params.storeId}/news/${data.slug}`);
+    console.log(data);
+    router.push(`/${params.storeId}/promotions/${data.id}`);
   };
   const onDelete = async () => {
     try {

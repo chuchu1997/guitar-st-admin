@@ -1,8 +1,9 @@
 import { CreateProductInterface, UpdateProductInterface } from "@/types/product";
 import api from "../interceptor"
-const url = "/promotions"
+import { CreatePromotionInterface } from "@/types/promotions";
+const url = "/promotion"
 
-export interface GetProductDTO  {
+export interface GetPromotionDTO  {
  
     storeID:number;
     limit?:number;
@@ -13,7 +14,25 @@ export interface GetProductDTO  {
 }
 export const PromotionAPI = {
 
-    getListPromotions: async({storeID, limit = 4 , currentPage = 1}:GetProductDTO)=>{
+
+
+
+    getPromotionByID: async(id:number)=>{
+            return await api({
+            method:"GET",
+            url:`${url}/${id}`,
+           
+        })
+    },
+
+    createPromotion:async(createParams:CreatePromotionInterface)=>{
+        return await api({
+            method:"POST",
+            url:url,
+            data:createParams
+        })
+    },
+    getAllPromotionsFromStore: async({storeID, limit = 4 , currentPage = 1}:GetPromotionDTO)=>{
         return await api({
             method:"GET",
             url:`${url}`,

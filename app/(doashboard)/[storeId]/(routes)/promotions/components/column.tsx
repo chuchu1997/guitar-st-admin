@@ -25,9 +25,9 @@ export const columns: ColumnDef<PromotionType>[] = [
     cell: ({ row }) => (
       <div>
         {row.original.isActive ? (
-          <Badge>Đang hoạt động</Badge>
+          <Badge className="bg-green-400">Đang hoạt động</Badge>
         ) : (
-          <Badge>Đang hoạt động</Badge>
+          <Badge variant={"destructive"}>Đang tắt</Badge>
         )}
       </div>
     ),

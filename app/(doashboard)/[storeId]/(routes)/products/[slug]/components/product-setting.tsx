@@ -6,21 +6,22 @@ import { Settings } from "lucide-react";
 interface SettingsSectionProps {
   form: any;
   loading: boolean;
+  name?:string
 }
-export const SettingsSection: React.FC<SettingsSectionProps> = ({ form, loading }) => (
+export const SettingsSection: React.FC<SettingsSectionProps> = ({ form, loading,name = "isFeatured" }) => (
   <Card className="shadow-sm">
     <CardHeader>
       <CardTitle className="flex items-center gap-3">
         <div className="p-2 bg-gray-50 rounded-lg">
           <Settings className="w-5 h-5 text-gray-600" />
         </div>
-        Cài đặt sản phẩm
+        Cài đặt hiển thị (hoạt động)
       </CardTitle>
     </CardHeader>
     <CardContent>
       <FormField
         control={form.control}
-        name="isFeatured"
+        name={name}
         render={({ field }) => (
           <FormItem className="flex flex-row items-start space-x-3 space-y-0 
                              rounded-lg border border-gray-200 p-4 bg-gray-50/50 
@@ -35,11 +36,9 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({ form, loading 
             </FormControl>
             <div className="space-y-1 leading-none">
               <FormLabel className="text-base font-medium cursor-pointer">
-                Sản phẩm nổi bật
+                Hiển thị 
               </FormLabel>
-              <FormDescription className="text-sm text-gray-600">
-                Hiển thị sản phẩm trong danh sách nổi bật trên trang chủ
-              </FormDescription>
+         
             </div>
           </FormItem>
         )}

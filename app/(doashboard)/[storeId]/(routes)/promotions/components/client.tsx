@@ -27,23 +27,16 @@ export const PromotionClient = () => {
     fetchPromotions();
   }, []);
   const fetchPromotions = async () => {
-    // if (storeId) {
-    //   let response = await PromotionAPI.getListPromotions({
-    //     storeID: Number(storeId),
-    //     currentPage: currentPage,
-    //   });
-    //   if (response.status === 200) {
-    //     console.log("DATA", response.data);
-    //     const { articles, total } = response.data as {
-    //       articles: ArticleInterface[];
-    //       total: number;
-    //     };
-    //     if (articles) {
-    //       setPromotions(articles);
-    //       setTotalPromotions(total);
-    //     }
-    //   }
-    // }
+    if (storeId) {
+      let response = await PromotionAPI.getAllPromotionsFromStore({
+        storeID: Number(storeId),
+        currentPage: currentPage,
+      });
+      if (response.status === 200) {
+        console.log("RESPONSE", response);
+        setPromotions(response.data);
+      }
+    }
   };
 
   return (

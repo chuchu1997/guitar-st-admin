@@ -2,21 +2,28 @@
 
 "use client";
 import { useParams } from "next/navigation";
-import { PromotionForm } from "./components/new-form";
+import { PromotionForm } from "./components/promotion-form";
 import { useEffect, useState } from "react";
 import ArticleAPI from "@/app/api/articles/article.api";
-import { ArticleInterface } from "@/types/news";
+import { PromotionType } from "@/types/promotions";
+import { PromotionAPI } from "@/app/api/promotions/promotion.api";
 
 const NewPage = () => {
+  const param = useParams();
+
   const { id, storeId } = useParams();
 
-  const [initialData, setInitialData] = useState<ArticleInterface | null>(null);
+  const [initialData, setInitialData] = useState<PromotionType | null>(null);
 
   useEffect(() => {
     fetchPromotionByID();
   }, []);
   const fetchPromotionByID = async () => {
+    console.log("ID", id);
+    console.log("PARAMS", param);
     if (id && id !== "new") {
+      let response = await PromotionAPI.getPromotionByID(Number(id));
+      console.log("RESPONSE", response);
       // CAN GET WITH SLUG
       // let response = await ArticleAPI.getArticlesWithStoreID({
       //   storeId: Number(storeId),
