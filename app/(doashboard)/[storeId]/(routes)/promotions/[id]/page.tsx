@@ -19,12 +19,10 @@ const PromotionPage = () => {
     fetchPromotionByID();
   }, []);
   const fetchPromotionByID = async () => {
-    console.log("ID", id);
-    console.log("PARAMS", param);
     if (id && id !== "new") {
       let response = await PromotionAPI.getPromotionByID(Number(id));
       setInitialData(response.data);
-      console.log("RESPONSE", response);
+
       // CAN GET WITH SLUG
       // let response = await ArticleAPI.getArticlesWithStoreID({
       //   storeId: Number(storeId),

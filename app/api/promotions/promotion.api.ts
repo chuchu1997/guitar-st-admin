@@ -1,13 +1,13 @@
 import { CreateProductInterface, UpdateProductInterface } from "@/types/product";
 import api from "../interceptor"
-import { CreatePromotionInterface } from "@/types/promotions";
+import { CreatePromotionInterface, PromotionTypeEnum, UpdatePromotionInterface } from "@/types/promotions";
 const url = "/promotion"
 
 export interface GetPromotionDTO  {
- 
     storeID:number;
     limit?:number;
     currentPage?:number;
+    promotionType?:PromotionTypeEnum
   
 
 
@@ -24,7 +24,19 @@ export const PromotionAPI = {
            
         })
     },
-
+    deletePromotion:async(id:number)=>{
+        return await api({
+            method:"DELETE",
+            url:`${url}/${id}`
+        })
+    },
+    updatePromotion:async(id:number,updateParams:UpdatePromotionInterface)=>{
+            return await api({
+                method:"PATCH",
+                url:`${url}/${id}`,
+                data:updateParams
+            })
+    },
     createPromotion:async(createParams:CreatePromotionInterface)=>{
         return await api({
             method:"POST",
@@ -32,14 +44,15 @@ export const PromotionAPI = {
             data:createParams
         })
     },
-    getAllPromotionsFromStore: async({storeID, limit = 4 , currentPage = 1}:GetPromotionDTO)=>{
+    getAllPromotionsFromStore: async({storeID,currentPage =1 , limit = 4 ,promotionType}:GetPromotionDTO)=>{
         return await api({
             method:"GET",
             url:`${url}`,
             params:{
-                storeID,
-                limit,
-                currentPage,
+               storeID:storeID,
+               currentPage,
+               limit,
+               promotionType
             }
         })
     },

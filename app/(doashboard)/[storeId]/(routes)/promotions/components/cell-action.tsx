@@ -11,6 +11,7 @@ import ActionDropdown from "@/components/action-dropdown";
 import ArticleAPI from "@/app/api/articles/article.api";
 import { ArticleInterface } from "@/types/news";
 import { PromotionType } from "@/types/promotions";
+import { PromotionAPI } from "@/app/api/promotions/promotion.api";
 
 interface CellActionProps {
   data: PromotionType;
@@ -33,17 +34,18 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-      let response = await ArticleAPI.deleteArticle(data.id);
+      let response = await PromotionAPI.deletePromotion(data.id);
       if (response.status !== 200) {
-        toast.error("Xoá Bài viết thất bại !!");
+        toast.error("Xoá chương trình thất bại !!");
         return;
       } else {
-        router.push(`/${params.storeId}/news`);
-        toast.success("Xoá Bài viết  thành công !!");
+        toast.success("Xoá Chương trình thành công  !!");
       }
     } catch (err) {
       toast.error("Có lỗi ở đâu đó   !!");
     } finally {
+      window.location.href = `/${params.storeId}/promotions`;
+
       setLoading(false);
     }
   };

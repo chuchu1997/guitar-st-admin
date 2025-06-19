@@ -44,6 +44,7 @@ import {
   CreatePromotionInterface,
   discountTypeEnum,
   PromotionType,
+  UpdatePromotionInterface,
 } from "@/types/promotions";
 import { PromotionAPI } from "@/app/api/promotions/promotion.api";
 
@@ -51,6 +52,7 @@ interface PromotionProps {
   initialData: PromotionType | null;
 }
 export const promotionProductSchema = z.object({
+  productId: z.number(),
   discountType: z.nativeEnum(discountTypeEnum),
   discount: z.number().min(0, "Giá trị giảm giá phải lớn hơn hoặc bằng 0"),
   product: z.any().optional(), // Hoặc z.custom<ProductInterface>().optional() nếu muốn validate kỹ hơn
@@ -120,49 +122,31 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
       };
 
       if (initialData) {
-        //UPDATE
+        let res = await PromotionAPI.updatePromotion(
+          initialData.id,
+          payload as UpdatePromotionInterface
+        );
+        if (res.status === 200) {
+          //UPDATE
+          const { message } = res.data as { message: string };
+          toast.success(message);
+        }
       } else {
-        console.log("PAYLOAD", payload);
         let res = await PromotionAPI.createPromotion(payload);
-        console.log("RES", res);
+        if (res.status === 200) {
+          const { message } = res.data as { message: string };
+          toast.success(message);
+        }
+
+        //     toast.success(message);
       }
 
-      // const payload: any = {
-      //   storeId: Number(storeId),
-      //   title: title,
-      //   slug: slug,
-      // };
-      // if (initialData) {
-      //   let response = await ArticleAPI.updateArticle(initialData.id, {
-      //     ...payload,
-      //     updatedAt: new Date(),
-      //   });
-      //   if (response.status === 200) {
-      //     const { article, message } = response.data as {
-      //       article: ArticleInterface;
-      //       message: string;
-      //     };
-
-      //     toast.success(message);
-      //   }
-      //   //UPDATE
-      // } else {
-      //   //CREATE
-      //   let response = await ArticleAPI.createArticle(payload);
-      //   if (response.status === 200) {
-      //     const { article, message } = response.data as {
-      //       article: ArticleInterface;
-      //       message: string;
-      //     };
-      //     toast.success(message);
-      //   }
-      // }
       // // router.refresh();
-      // router.push(`/${storeId}/promotions/`);
-      // toast.success(toastMessage);
     } catch (_err) {
       toast.error("Something when wrong !!");
     } finally {
+      router.push(`/${storeId}/promotions/`);
+
       setLoading(false);
     }
   };
@@ -190,18 +174,31 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
     if (initialData) {
       const formData: PromotionFormValues = {
         ...initialData,
-        startDate: new Date(),
-        endDate: new Date(),
+        startDate: new Date(initialData.startDate),
+        endDate: new Date(initialData.endDate),
         name:
           typeof initialData.name === "string"
             ? initialData.name
             : String(initialData.name),
-
         isActive:
           typeof initialData.isActive === "boolean"
             ? initialData.isActive
             : Boolean(initialData.isActive),
-        // Optionally, ensure promotionProducts is correct type if needed
+        promotionProducts: Array.isArray(initialData.promotionProducts)
+          ? initialData.promotionProducts
+              .filter(
+                (item: any) =>
+                  typeof item.productId === "number" &&
+                  item.productId !== undefined
+              )
+              .map((item: any) => ({
+                ...item,
+                productId: item.productId as number,
+                discountType: item.discountType,
+                discount: item.discount,
+                product: item.product ?? {},
+              }))
+          : [],
       };
       setTimeout(() => {
         form.reset(formData);
@@ -239,7 +236,7 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
       <Separator />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" w-full">
-          <div className="grid grid-cols-2 gap-8 mt-[15px]">
+          <div className="grid grid-cols-2 gap-4 mt-[15px] ">
             <InputSectionWithForm
               form={form}
               nameFormField="name"

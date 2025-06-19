@@ -22,7 +22,6 @@ import { PromotionProduct } from "../../../promotions/[id]/components/promotion-
 interface ProductPromotionSelectorProps {
   form: any;
   loading: boolean;
-  initValue?: any[];
   name: string;
 }
 
@@ -212,7 +211,7 @@ const DiscountDialog: React.FC<DiscountDialogProps> = ({
 
 export const ProductPromotionSelector: React.FC<
   ProductPromotionSelectorProps
-> = ({ form, loading, initValue, name }) => {
+> = ({ form, loading, name }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [availableProducts, setAvailableProducts] = useState<
     ProductInterface[]
@@ -242,7 +241,7 @@ export const ProductPromotionSelector: React.FC<
         fetchListProducts("");
       }
     }, 300),
-    [currentIDS, searchTerm]
+    [selectedPromotionProducts, searchTerm]
   );
 
   const fetchListProducts = async (name: string) => {
@@ -252,9 +251,12 @@ export const ProductPromotionSelector: React.FC<
     });
 
     if (response.status === 200) {
+      const selectedIds = selectedPromotionProducts.map((p) => p.productId);
+
       let data = response.data.products.filter(
-        (product: ProductInterface) => !currentIDS.includes(product.id)
+        (product: ProductInterface) => !selectedIds.includes(product.id)
       );
+
       setAvailableProducts(data);
     }
   };
@@ -263,26 +265,27 @@ export const ProductPromotionSelector: React.FC<
 
   useEffect(() => {
     const currentSelection: PromotionProduct[] = form.getValues(name) || [];
-    console.log("CC", currentSelection);
     if (currentSelection && currentSelection.length > 0) {
-      let s = 1;
-
-      let promotionProducts: PromotionProduct[] = currentSelection.map(
+      console.log("CC", currentSelection);
+      let promotionProductsInit: PromotionProduct[] = currentSelection.map(
         (value) => ({
-          id: ++s,
-
-          discountType: value.discountType,
-          discount: value.discount,
-          product: value.product,
+          ...value,
         })
-      ) as PromotionProduct[];
-      //FIXME://
-      setCurrentIDS((prev) => [
-        ...prev,
-        ...promotionProducts.map((value) => value ?? ""),
-      ]);
+      );
+      setSelectedPromotionProducts(promotionProductsInit);
+      console.log("HEHE", promotionProductsInit);
+      // let promotionProducts: PromotionProduct[] = currentSelection.map(
+      //   (value) => ({
+      //     id: ++s,
 
-      setSelectedPromotionProducts(promotionProducts);
+      //     discountType: value.discountType,
+      //     discount: value.discount,
+      //     product: value.product,
+      //   })
+      // ) as PromotionProduct[];
+      //FIXME://
+
+      // setSelectedPromotionProducts(promotionProducts);
     }
   }, [form.watch(name)]);
 
@@ -326,18 +329,17 @@ export const ProductPromotionSelector: React.FC<
   };
 
   const handleDiscountConfirm = (
-    discountType: discountTypeEnum.PERCENT | discountTypeEnum.FIXED,
-    discount: number
+    discountType: discountTypeEnum,
+    discountValue: number
   ) => {
     if (!selectedProduct) return;
 
     const currentSelection: PromotionProduct[] = form.getValues(name) || [];
     const newPromotionProduct: PromotionProduct = {
-      id: selectedProduct.id,
-
       discountType,
-      discount,
+      discount: discountValue,
       product: selectedProduct,
+      productId: selectedProduct.id,
     };
 
     const newSelection: PromotionProduct[] = [
@@ -347,7 +349,6 @@ export const ProductPromotionSelector: React.FC<
 
     form.setValue(name, newSelection);
     setSelectedPromotionProducts((prev) => [...prev, newPromotionProduct]);
-    setCurrentIDS((prev) => [...prev, selectedProduct.id]);
     setSearchTerm("");
     setSelectedProduct(null);
   };
@@ -355,20 +356,11 @@ export const ProductPromotionSelector: React.FC<
   const handleProductRemove = (productId: number): void => {
     const currentSelection: PromotionProduct[] = form.getValues(name) || [];
     const newSelection: PromotionProduct[] = currentSelection.filter(
-      (item) => item.id !== productId
+      (item) => item.productId !== productId
     );
-
     const newSelectedProducts: PromotionProduct[] =
-      selectedPromotionProducts.filter((item) => item.id !== productId);
-
+      selectedPromotionProducts.filter((item) => item.productId !== productId);
     setSelectedPromotionProducts(newSelectedProducts);
-    setCurrentIDS((prev) =>
-      prev.filter(
-        (s) =>
-          s === Number(id) || newSelectedProducts.some((item) => item.id === s)
-      )
-    );
-
     form.setValue(name, newSelection);
   };
 
@@ -392,7 +384,7 @@ export const ProductPromotionSelector: React.FC<
           <div className="space-y-2">
             {selectedPromotionProducts.map((item: PromotionProduct) => (
               <div
-                key={item.id}
+                key={item.productId}
                 className="flex items-center gap-3 bg-gradient-to-r from-orange-50 to-red-50 
                          border border-orange-200 rounded-lg p-3 group hover:shadow-sm 
                          transition-all duration-200">
@@ -433,7 +425,7 @@ export const ProductPromotionSelector: React.FC<
                 </div>
                 <button
                   type="button"
-                  onClick={() => handleProductRemove(item.id)}
+                  onClick={() => handleProductRemove(item.productId ?? 0)}
                   disabled={loading}
                   className="p-1 rounded-full hover:bg-red-100 text-gray-400 
                            hover:text-red-500 transition-colors duration-200
