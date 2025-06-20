@@ -520,7 +520,7 @@ const SEOForm = ({ loading = false }) => {
                         {seoData.title || "Tiêu đề trang của bạn"}
                       </div>
                       <div className="text-green-700 text-sm">
-                        ${process.env.BASE_URL_WEBSITE}/{seoData.slug || "url-slug"}
+                        {process.env.NEXT_PUBLIC_BASE_URL_WEBSITE}/{seoData.slug || "url-slug"}
                       </div>
                       <div className="text-gray-600 text-sm mt-1">
                         {seoData.description || "Mô tả SEO sẽ hiển thị ở đây khi bạn nhập vào..."}
@@ -550,7 +550,8 @@ const SEOForm = ({ loading = false }) => {
                           {seoData.ogDescription || seoData.description || "Mô tả khi chia sẻ trên mạng xã hội"}
                         </div>
                         <div className="text-gray-400 text-xs mt-2">
-                          example.com
+                          {process.env.NEXT_PUBLIC_BASE_URL_WEBSITE}
+                       
                         </div>
                       </div>
                     </div>
