@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
-import { ArrowUpAZ, Captions, Link, Trash } from "lucide-react";
+import { ArrowUpAZ, Captions, Link, MousePointer, Trash } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
@@ -31,6 +31,7 @@ interface BannerProps {
 
 const formSchema = z.object({
   title: z.string().optional(),
+  description: z.string().optional(),
   images: z.object({
     url: z.string().min(1, "Vui lòng chọn ảnh."),
     file: z.instanceof(File).optional(), // <- optional ở đây
@@ -39,6 +40,12 @@ const formSchema = z.object({
   isActive: z.boolean(),
   link: z.string().optional(),
   position: z.coerce.number().optional(), // Hợp lệ với cả "2" và 2
+  cta: z
+    .object({
+      title: z.string(),
+      link: z.string(),
+    })
+    .optional(),
 });
 
 type BannersFormValues = z.infer<typeof formSchema>;
@@ -61,8 +68,13 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
     defaultValues: initialData || {
       title: "",
       isActive: true,
+      description: "",
       link: "",
       position: 1,
+      cta: {
+        title: "",
+        link: "",
+      },
     },
   });
 
@@ -86,9 +98,18 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
         let response = await BannerAPI.updateBanner(initialData.id, {
           storeId: Number(storeId),
           imageUrl: finalImage.url,
+          description: data.description,
+
           title: data.title,
           link: data.link,
           isActive: data.isActive,
+          cta:
+            data.cta && data.cta.title !== "" && data.cta.link !== ""
+              ? {
+                  title: data.cta.title,
+                  link: data.cta.link,
+                }
+              : undefined,
           updatedAt: new Date(),
           position: data.position, // Giữ nguyên vị trí cũ
         });
@@ -99,9 +120,18 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
       } else {
         let response = await BannerAPI.createBanner({
           storeId: Number(storeId),
+          description: data.description,
+
           imageUrl: finalImage.url,
           title: data.title,
           link: data.link,
+          cta:
+            data.cta && data.cta.title !== "" && data.cta.link !== ""
+              ? {
+                  title: data.cta.title,
+                  link: data.cta.link,
+                }
+              : undefined,
           isActive: data.isActive,
           position: data.position ?? 1,
         });
@@ -158,6 +188,15 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
         link: initialData.link ?? "",
         isActive: initialData.isActive ?? false,
         position: initialData.position ?? 1,
+        cta: initialData.cta
+          ? {
+              title: initialData.cta.title,
+              link: initialData.cta.link,
+            }
+          : {
+              title: "",
+              link: "",
+            },
         images: {
           file: undefined,
           url: initialData.imageUrl ?? "",
@@ -222,6 +261,15 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
             />
             <InputSectionWithForm
               form={form}
+              nameFormField="description"
+              placeholder="Nhập Mô tả của Banner (Nếu muốn)"
+              title="Nhập mô tả"
+              icon={Captions}
+              loading={loading}
+            />
+
+            <InputSectionWithForm
+              form={form}
               icon={Link}
               nameFormField="link"
               placeholder="Nhập đường link của Banner  (Nếu có)"
@@ -247,6 +295,32 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
                 "Nếu check vào thì hình ảnh này được hiển thị ở Banner"
               }
             />
+            {/* CTA Options Section */}
+            <div className="mt-8">
+              <Heading
+                title="CTA Options"
+                description="Cấu hình nút Call-to-Action cho Banner"
+              />
+              <Separator className="my-4" />
+              <div className="grid grid-cols-2 gap-8">
+                <InputSectionWithForm
+                  form={form}
+                  nameFormField="cta.title"
+                  placeholder="Nhập tiêu đề nút CTA (VD: Mua ngay, Xem thêm...)"
+                  title="Tiêu đề CTA"
+                  icon={MousePointer}
+                  loading={loading}
+                />
+                <InputSectionWithForm
+                  form={form}
+                  icon={Link}
+                  nameFormField="cta.link"
+                  placeholder="Nhập đường link cho nút CTA"
+                  title="Đường link CTA"
+                  loading={loading}
+                />
+              </div>
+            </div>
           </div>
 
           <Button disabled={loading} className="ml-auto mt-4" type="submit">

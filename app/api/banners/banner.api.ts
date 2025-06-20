@@ -6,19 +6,13 @@ import { CreateBannerInterface, UpdateBannerInterface } from "@/types/banner";
 
 let url = "/banners";
 
-export interface GetBannerRelateWithStoreDTO {
-  storeId: number;
-
-  id?: number;
-}
 const BannerAPI = {
-  getBannerWithStoreID: async (data: GetBannerRelateWithStoreDTO) => {
+  getBannerWithStoreID: async (storeID: number) => {
     return await api({
       method: "GET",
       url: url,
       params: {
-        slug: data.id,
-        storeId: data.storeId,
+        storeID: storeID,
       },
     });
   },

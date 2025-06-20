@@ -12,7 +12,10 @@
 //   isActive  Boolean  @default(true)
 //   createdAt DateTime @default(now())
 //   updatedAt DateTime @updatedAt
-
+export interface CTAInterface {
+  title: string;
+  link: string;
+}
 interface BannerBaseInterface {
   imageUrl: string;
   link?: string;
@@ -20,6 +23,7 @@ interface BannerBaseInterface {
   description?: string;
   position?: number; // 1 là vị trí đầu tiên
   isActive?: boolean;
+  cta?: CTAInterface;
 
   storeId: number;
   createdAt?: Date;

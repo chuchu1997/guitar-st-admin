@@ -25,13 +25,11 @@ export const BannerClient = () => {
 
   const fetchAllBanners = async () => {
     if (storeId && typeof storeId === "string") {
-      let response = await BannerAPI.getBannerWithStoreID({
-        storeId: Number(storeId),
-      });
+      let response = await BannerAPI.getBannerWithStoreID(Number(storeId));
       if (response.status === 200) {
         const { banners } = response.data as { banners: BannerInterface[] };
+
         setBanners(banners);
-        console.log("ALL BANNER", banners);
       }
     }
   };

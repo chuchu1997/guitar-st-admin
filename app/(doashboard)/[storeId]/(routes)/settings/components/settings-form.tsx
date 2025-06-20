@@ -54,6 +54,7 @@ import { TextAreaSectionWithForm } from "@/components/ui/textAreaSectionWithForm
 import { ImageUploadSection } from "../../products/[slug]/components/product-image-upload";
 import { SocialsSection } from "./socials-link-dropdown";
 import S3CloudAPI from "@/app/api/upload/s3-cloud";
+import SEOForm from "@/components/seo/seo";
 
 interface SettingsProps {
   initialData: StoreInterface;
@@ -69,8 +70,8 @@ const formSchema = z.object({
     .string()
     .min(1, "Tên store không được để trống")
     .min(3, "Tên store phải có ít nhất 3 ký tự")
-    .max(50, "Tên store không được quá 50 ký tự"),
-  description: z.string().max(200, "Mô tả không được quá 200 ký tự").optional(),
+    .max(100, "Tên store không được quá 50 ký tự"),
+  description: z.string().max(600, "Mô tả không được quá 200 ký tự").optional(),
 
   email: z.string().email().optional(),
   phone: z
@@ -465,13 +466,16 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                     loading={loading}
                   />
                 </div>
+                <div className="col-span-2">
+                  <SEOForm loading={loading} />
+                </div>
               </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100 justify-center">
                 <Button
                   type="submit"
-                  disabled={loading || !isValid || !hasChanges}
+                  disabled={loading}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg transition-all duration-200 transform hover:scale-[1.02]">
                   {loading ? (
                     <>
