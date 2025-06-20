@@ -55,6 +55,7 @@ import { ImageUploadSection } from "../../products/[slug]/components/product-ima
 import { SocialsSection } from "./socials-link-dropdown";
 import S3CloudAPI from "@/app/api/upload/s3-cloud";
 import SEOForm from "@/components/seo/seo";
+import { seoSchemaZod } from "@/schemas/seoSchema";
 
 interface SettingsProps {
   initialData: StoreInterface;
@@ -89,6 +90,7 @@ const formSchema = z.object({
   }),
 
   socials: z.array(socialSchema).optional(),
+  seo: seoSchemaZod.optional(),
 });
 
 type SettingsFormValues = z.infer<typeof formSchema>;
@@ -216,6 +218,19 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
             url: initialData.favicon,
           }
         : undefined,
+      seo: initialData.seo
+        ? initialData.seo
+        : {
+            title: "",
+            description: "",
+            keywords: "",
+            slug: "",
+            canonicalUrl: "",
+            altText: "",
+            ogTitle: "",
+            ogDescription: "",
+            ogImage: "",
+          },
     },
   });
 
@@ -235,6 +250,11 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       setIsReady(true);
     }
   }, [storeId]);
+  useEffect(() => {
+    if (Object.keys(form.formState.errors).length > 0) {
+      console.log("Zod validation errors:", form.formState.errors);
+    }
+  }, [form.formState.errors]);
   // useEffect(() => {
   //   if (initialData) {
   //     const formData: SettingsFormValues = {
@@ -285,6 +305,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
               finalFav.url = imageUrls[0];
             }
           }
+
           const payload = {
             name: data.name,
             description: data.description,
@@ -292,6 +313,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
             phone: data.phone,
             logo: finalLogo.url,
             favicon: finalFav.url,
+            seo: data.seo,
             socials: data.socials?.map((social) => ({
               id: social.id ?? undefined,
               type: social.type,
@@ -467,7 +489,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   />
                 </div>
                 <div className="col-span-2">
-                  <SEOForm loading={loading} />
+                  <SEOForm loading={loading} form={form} />
                 </div>
               </div>
 

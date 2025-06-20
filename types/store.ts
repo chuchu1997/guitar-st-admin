@@ -10,6 +10,9 @@
 //      categories?:[];
 //      news?:[]
 //     //  user
+
+import { SeoType } from "./seo";
+
 // }
 export enum SocialType {
   FACEBOOK="FACEBOOK",
@@ -41,6 +44,7 @@ interface StoreBase {
     logo?:string;
     favicon?:string;
     socials:StoreSocials[]
+    seo?:SeoType
     
 }
 
