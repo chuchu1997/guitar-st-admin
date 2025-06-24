@@ -41,7 +41,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const onDelete = async () => {
     try {
       setLoading(true);
-      let response = await ProductAPI.removeProduct(data.id);
+      let response = await ProductAPI.removeProduct(data.id.toString());
       if (response.status === 200) {
         const { message, product } = response.data as {
           product: ProductInterface;

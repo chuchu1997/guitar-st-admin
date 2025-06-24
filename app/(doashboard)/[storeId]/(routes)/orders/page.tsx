@@ -1,4 +1,3 @@
-import prismadb from "@/lib/primadb";
 import { OrderClient } from "./components/client";
 import { format } from "date-fns";
 import { OrderColumn } from "./components/column";

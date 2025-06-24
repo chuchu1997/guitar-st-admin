@@ -45,7 +45,9 @@ export const CategoryClient = (props: CategoryClientProps) => {
         </Button>
       </div>
       <Separator />
-      <DataTable searchKey="name" columns={columns} data={data}></DataTable>
+      <DataTable searchKey="name" columns={columns} data={data} totalItems={0} currentPage={0} onPageChange={function (page: number): void {
+        throw new Error("Function not implemented.");
+      } }></DataTable>
       <Heading title={"API"} description={"API Call for billboards"} />
       <Separator />
       <ApiList entityName="categories" entityIdName="slug" />
