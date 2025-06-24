@@ -14,7 +14,7 @@ RUN apt-get update -y && apt-get install -y openssl && rm -rf /var/lib/apt/lists
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install 
 
 # Copy source code
 COPY . .
@@ -25,8 +25,8 @@ RUN npm run build
 # Expose port
 EXPOSE 3500
 
-# Set environment to production
-ENV NODE_ENV=production
+# # Set environment to production
+# ENV NODE_ENV=production
 
 # Start the application
 CMD ["npm", "start"]
