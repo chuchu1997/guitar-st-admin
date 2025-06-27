@@ -27,11 +27,15 @@ export default function SetupLayout({
   const router = useRouter();
 
   const getUserByToken = async () => {
+    console.log("first stage call 1: ");
     const responseAuth = await authApi.getUserProfile();
+
     if (responseAuth.status === 200) {
       const { user } = responseAuth.data;
+      console.log("seconds  stage call 1: ", user);
+
       if (user && user.role === Role.ADMIN) {
-        let responseStore = await StoresAPI.getStoresByUserID(user.sub);
+        let responseStore = await StoresAPI.getStoresByUserID(user.id);
         //LẤY TẤT CẢ STORES THUỘC VỀ USER NÀY
         if (responseStore.status === 200) {
           const { stores } = responseStore.data as { stores: StoreInterface[] };

@@ -48,12 +48,13 @@ export const StoreModal = () => {
     try {
       setLoading(true);
       let responseUser = await authApi.getUserProfile();
+      console.log("USER PROFILE", responseUser);
       if (responseUser.status === 200) {
         const { user } = responseUser.data;
         if (user.role === Role.ADMIN) {
           const response = await StoresAPI.createStore({
             name: values.name,
-            userID: user.sub,
+            userID: user.id,
           });
           console.log(response);
           if (response.status === 200) {

@@ -25,7 +25,7 @@ const Navbar = () => {
     const response = await authApi.getUserProfile();
     const { user } = response.data;
     if (user && user.role === Role.ADMIN) {
-      const response = await StoresAPI.getStoresByUserID(user.sub);
+      const response = await StoresAPI.getStoresByUserID(user.id);
       if (response.status === 200) {
         const { stores } = response.data;
         if (stores) {

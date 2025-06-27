@@ -42,13 +42,13 @@ export default function SettingsPage() {
 
       if (user && user.role === Role.ADMIN) {
         let responseStore = await StoresAPI.getStoreRelateWithUser(
-          user.sub,
+          user.id,
           storeId.toString()
         );
 
         if (responseStore.status === 200) {
           const { store } = responseStore.data as { store: StoreInterface };
-          console.log("STORE", store);
+
           setStore(store);
         }
       }

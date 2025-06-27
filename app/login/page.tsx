@@ -47,7 +47,9 @@ const LoginPage = () => {
     const token = localStorage.getItem("access_token");
 
     if (token) {
-      console.log("TOKEN CALL", token);
+      if (typeof window !== "undefined") {
+        router.replace("/");
+      }
       // if (window.location.pathname !== "/") {
       //   router.replace("/");
       // }

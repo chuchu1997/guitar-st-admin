@@ -36,7 +36,7 @@ export default function DashboardLayout(props: LayoutProps) {
 
         if (user && user.role === Role.ADMIN) {
           setUnAuthorize(false);
-          const response = await StoresAPI.getStoresByUserID(user.sub);
+          const response = await StoresAPI.getStoresByUserID(user.id);
           if (response.status === 200) {
             //
 
