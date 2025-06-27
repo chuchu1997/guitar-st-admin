@@ -14,6 +14,7 @@ const S3CloudAPI = {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      withCredentials: false, // nếu không dùng cookie
       url: url,
       data: formData,
     });
