@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import ProductAPI from "@/app/api/products/products.api";
 import S3CloudAPI from "@/app/api/upload/s3-cloud";
 import { GiftProductSelector } from "./product-gifts";
+import { useRouter } from "next/navigation"; // ✅ cho App Router
 
 export const giftSchema = z.object({
   id: z.number(),
@@ -69,6 +70,7 @@ type ProductFormValues = z.infer<typeof formSchema>;
 export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const { storeId } = useParams();
   const [mounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
   // const formData: ProductFormValues = {
@@ -237,7 +239,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         colors: cleanedColors, // 👈 cleaned colors
         sizes: cleanedSizes, // 👈 cleaned sizes
       };
-
+      console.log("PAYLOAD", payload);
       const res = initialData
         ? await ProductAPI.updateProduct(initialData.id, {
             ...payload,
@@ -254,7 +256,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
     } finally {
       setLoading(false);
       if (typeof window !== "undefined") {
-        window.location.href = `/${storeId}/products`;
+        router.push(`/${storeId}/products`);
       }
     }
   };
