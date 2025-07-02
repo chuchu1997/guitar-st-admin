@@ -1,3 +1,4 @@
+import { SeoType } from "./seo";
 
 
 
@@ -28,8 +29,13 @@ interface CategoryBase {
     description:string;
     parentId?:number|null;
     variant?:CategoryVariant
+
+
+    seo?:SeoType
     createdAt?:Date;
     updatedAt?:Date;
+
+
 
 
 }

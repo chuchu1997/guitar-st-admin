@@ -18,7 +18,7 @@ import { PromotionType } from "@/types/promotions";
 export const PromotionClient = () => {
   const { storeId } = useParams();
   const [promotions, setPromotions] = useState<PromotionType[]>([]);
-  const [totalPromotions, setTotalPromotions] = useState<number>(1);
+  const [totalPromotions, setTotalPromotions] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
   const router = useRouter();

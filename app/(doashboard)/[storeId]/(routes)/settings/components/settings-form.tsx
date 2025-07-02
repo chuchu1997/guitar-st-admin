@@ -79,15 +79,6 @@ const formSchema = z.object({
     .string()
     .regex(/^0\d{9}$/i, { message: "Số điện thoại không hợp lệ" })
     .optional(),
-  logo: z.object({
-    url: z.string(),
-    file: z.instanceof(File).optional(), // <- optional ở đây
-  }),
-
-  favicon: z.object({
-    url: z.string(),
-    file: z.instanceof(File).optional(), // <- optional ở đây
-  }),
 
   socials: z.array(socialSchema).optional(),
   seo: seoSchemaZod.optional(),
@@ -189,15 +180,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
   const [loading, setLoading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  // email: z.string().email().optional(),
-  //   phone: z
-  //     .string()
-  //     .regex(/^0\d{9}$/i, { message: "Số điện thoại không hợp lệ" })
-  //     .optional(),
-  //   logo: z.string().optional(),
-  //   favicon: z.string().optional(),
-  //   socials: z.array(socialSchema).optional(),
-  // Performance optimization: Memoized form configuration
+
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -206,18 +189,6 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       email: initialData?.email || "",
       phone: initialData?.phone || "",
       socials: initialData.socials || undefined,
-      logo: initialData.logo
-        ? {
-            file: undefined,
-            url: initialData.logo,
-          }
-        : undefined,
-      favicon: initialData.favicon
-        ? {
-            file: undefined,
-            url: initialData.favicon,
-          }
-        : undefined,
       seo: initialData.seo
         ? initialData.seo
         : {
@@ -281,38 +252,11 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       try {
         setLoading(true);
         if (storeId) {
-          const finalLogo = data.logo;
-          const finalFav = data.favicon;
-          if (finalLogo.file) {
-            const formData = new FormData();
-            formData.append("files", finalLogo.file);
-            const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
-            if (uploadRes.status !== 200) throw new Error("Upload thất bại");
-            const { imageUrls } = uploadRes.data as { imageUrls: string[] };
-            if (imageUrls.length > 0) {
-              finalLogo.file = undefined;
-              finalLogo.url = imageUrls[0];
-            }
-          }
-          if (finalFav.file) {
-            const formData = new FormData();
-            formData.append("files", finalFav.file);
-            const uploadRes = await S3CloudAPI.uploadImageToS3(formData);
-            if (uploadRes.status !== 200) throw new Error("Upload thất bại");
-            const { imageUrls } = uploadRes.data as { imageUrls: string[] };
-            if (imageUrls.length > 0) {
-              finalFav.file = undefined;
-              finalFav.url = imageUrls[0];
-            }
-          }
-
           const payload = {
             name: data.name,
             description: data.description,
             email: data.email,
             phone: data.phone,
-            logo: finalLogo.url,
-            favicon: finalFav.url,
             seo: data.seo,
             socials: data.socials?.map((social) => ({
               id: social.id ?? undefined,
@@ -322,7 +266,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
             })),
             updatedAt: new Date(),
           };
-          console.log("PAYLOAD", payload);
+
           await StoresAPI.updateStore(storeId.toString(), payload);
           setSaveSuccess(true);
           setTimeout(() => setSaveSuccess(false), 3000);
@@ -466,20 +410,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   placeholder="Vui lòng nhập số hotline của cửa hàng"
                   icon={PhoneCall}
                 />
-                <ImageUploadSection
-                  form={form}
-                  nameFormField="logo"
-                  loading={loading}
-                  title="Logo của cửa hàng"
-                  note="Kích thước nên là 200x200"
-                />
-                <ImageUploadSection
-                  form={form}
-                  nameFormField="favicon"
-                  loading={loading}
-                  title="Icon nhỏ của website"
-                  note="Định dạng (.ico) kích thước 32x32 "
-                />
+
                 <div className="col-span-1 md:col-span-2">
                   <SocialsSection
                     form={form}

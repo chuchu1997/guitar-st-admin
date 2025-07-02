@@ -1,3 +1,4 @@
+import { SeoType } from "./seo";
 
 
 
@@ -31,7 +32,7 @@ interface ProductBase {
     reviews:[]
     sku:string;
     storeId:number;
-
+      seo?:SeoType
 
         //sản phẩm này có tặng quà nào không?
     giftProducts?:any[];

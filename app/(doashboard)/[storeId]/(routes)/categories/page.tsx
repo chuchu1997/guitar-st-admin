@@ -51,6 +51,8 @@ import S3CloudAPI from "@/app/api/upload/s3-cloud";
 import { InputSectionWithForm } from "@/components/ui/inputSectionWithForm";
 import { ImageUploadSection } from "../products/[slug]/components/product-image-upload";
 import { TextAreaSectionWithForm } from "@/components/ui/textAreaSectionWithForm";
+import { seoSchemaZod } from "@/schemas/seoSchema";
+import SEOForm from "@/components/seo/seo";
 
 const formSchema = z.object({
   name: z.string().min(3, "Vui lòng nhập tên của danh mục"),
@@ -79,6 +81,7 @@ const formSchema = z.object({
   parentId: z.string().optional(),
   variant: z.nativeEnum(CategoryVariant).optional(),
   description: z.string().min(3, "Vui lòng nhập mô tả của danh mục"),
+  seo: seoSchemaZod.optional(),
 });
 
 type CategoryFormValues = z.infer<typeof formSchema>;
@@ -97,6 +100,17 @@ export default function CategoriesManagement() {
       slug: "",
       description: "",
       parentId: "",
+      seo: {
+        title: "",
+        description: "",
+        keywords: "",
+        slug: "",
+        canonicalUrl: "",
+        altText: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+      },
     },
   });
 
@@ -206,7 +220,6 @@ export default function CategoriesManagement() {
 
   // Handle form submission
   const onSubmit = async (data: CategoryFormValues) => {
-    console.log("DATA", data);
     try {
       let finalImage = data.imageUrl;
       if (data.imageUrl.file) {
@@ -234,8 +247,8 @@ export default function CategoriesManagement() {
           updatedAt: new Date(),
           storeId: Number(storeId),
           variant: data.variant ?? undefined,
+          seo: data.seo,
         };
-        console.log("UPDATE DATA", updateData);
 
         await onUpdateCategory(editingCategoryId, updateData);
       } else {
@@ -251,6 +264,7 @@ export default function CategoriesManagement() {
               ? null
               : Number(data.parentId),
           variant: data.variant ?? undefined,
+          seo: data.seo,
         };
 
         await onCreateCategory(newCategory);
@@ -267,6 +281,7 @@ export default function CategoriesManagement() {
   // Edit a category
   const handleEditCategory = (category: CategoryInterface) => {
     setEditingCategoryId(category.id);
+
     form.reset({
       name: category.name,
       slug: category.slug,
@@ -277,6 +292,17 @@ export default function CategoriesManagement() {
       },
       parentId: category.parentId ? String(category.parentId) : "",
       variant: category.variant ?? undefined,
+      seo: category.seo ?? {
+        title: "",
+        description: "",
+        keywords: "",
+        slug: "",
+        canonicalUrl: "",
+        altText: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+      },
     });
     setIsDialogOpen(true);
   };
@@ -289,6 +315,17 @@ export default function CategoriesManagement() {
       description: "",
       imageUrl: undefined,
       parentId: "",
+      seo: {
+        title: "",
+        description: "",
+        keywords: "",
+        slug: "",
+        canonicalUrl: "",
+        altText: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+      },
     });
     setEditingCategoryId(null);
   };
@@ -380,7 +417,7 @@ export default function CategoriesManagement() {
                 <Plus className="h-4 w-4 mr-1" /> Thêm mới
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-scroll ">
+            <DialogContent className="max-h-[90vh]  overflow-y-scroll ">
               <DialogHeader className="flex-shrink-0">
                 <DialogTitle>
                   <div className="text-center text-xl italic font-semibold">
@@ -484,6 +521,8 @@ export default function CategoriesManagement() {
                       title="Mô tả"
                       placeholder="Vui lòng nhập mô tả danh mục"
                     />
+
+                    <SEOForm form={form} loading={false} />
 
                     <DialogFooter className="flex-shrink-0 pt-6 mt-6 border-t">
                       <Button

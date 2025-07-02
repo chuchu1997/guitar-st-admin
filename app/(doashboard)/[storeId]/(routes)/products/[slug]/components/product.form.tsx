@@ -29,6 +29,8 @@ import ProductAPI from "@/app/api/products/products.api";
 import S3CloudAPI from "@/app/api/upload/s3-cloud";
 import { GiftProductSelector } from "./product-gifts";
 import { useRouter } from "next/navigation"; // ✅ cho App Router
+import { seoSchemaZod } from "@/schemas/seoSchema";
+import SEOForm from "@/components/seo/seo";
 
 export const giftSchema = z.object({
   id: z.number(),
@@ -61,6 +63,7 @@ const formSchema = z.object({
   viewCount: z.coerce.number().default(0).optional(),
   ratingCount: z.coerce.number().default(5).optional(),
   giftProducts: z.array(giftSchema).optional(),
+  seo: seoSchemaZod.optional(),
 });
 interface ProductProps {
   initialData: (ProductInterface & {}) | null;
@@ -98,6 +101,17 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       viewCount: 0,
       ratingCount: 5,
       giftProducts: [],
+      seo: {
+        title: "",
+        description: "",
+        keywords: "",
+        slug: "",
+        canonicalUrl: "",
+        altText: "",
+        ogTitle: "",
+        ogDescription: "",
+        ogImage: "",
+      },
     },
   });
 
@@ -203,6 +217,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         sku,
         categoryId,
         shortDescription,
+        seo,
       } = data;
 
       const cleanedColors = selectedColors.map((color) => {
@@ -233,13 +248,14 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         slug,
         stock,
         sku,
+        seo,
         categoryId: Number(categoryId),
         storeId: Number(storeId),
         images: finalImageUrls,
         colors: cleanedColors, // 👈 cleaned colors
         sizes: cleanedSizes, // 👈 cleaned sizes
       };
-      console.log("PAYLOAD", payload);
+
       const res = initialData
         ? await ProductAPI.updateProduct(initialData.id, {
             ...payload,
@@ -301,6 +317,17 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       if (initialData) {
         const formattedData: ProductFormValues = {
           ...initialData,
+          seo: initialData.seo ?? {
+            title: "",
+            description: "",
+            keywords: "",
+            slug: "",
+            canonicalUrl: "",
+            altText: "",
+            ogTitle: "",
+            ogDescription: "",
+            ogImage: "",
+          },
           categoryId: initialData.categoryId.toString(),
           originalPrice: initialData.originalPrice ?? 0,
         };
@@ -413,6 +440,8 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           />
 
           <SettingsSection form={form} loading={loading} />
+
+          <SEOForm form={form} loading={loading} />
 
           <div className="flex items-center justify-center gap-4 pt-8 border-t border-gray-200">
             <Button

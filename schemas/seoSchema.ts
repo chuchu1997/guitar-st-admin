@@ -14,9 +14,9 @@ export const seoSchemaZod =z.object({
   ogTitle: z.string(),
   ogDescription: z.string(),
   ogImage:z.string() ,
-  robotsIndex: z.boolean().default(true),
-  robotsFollow:  z.boolean().default(true),
-  xmlSitemap:  z.boolean().default(true),
-  structuredData:  z.boolean().default(true)
+  robotsIndex: z.boolean().default(true).optional(),
+  robotsFollow:  z.boolean().default(true).optional(),
+  xmlSitemap:  z.boolean().default(true).optional(),
+  structuredData:  z.boolean().default(true).optional()
 
 });
