@@ -1,6 +1,6 @@
 
 
- enum OrderStatus { 
+ export enum OrderStatus { 
   ORDERED   ="ORDERED"   ,     // Đã đặt hàng
   AWAITING_SHIPMENT="AWAITING_SHIPMENT" ,// Chờ chuyển phát
   IN_TRANSIT  ="IN_TRANSIT"   ,   // Đang trung chuyển
@@ -54,6 +54,12 @@ interface OrderItem extends OrderItemBase{
 interface OrderBase { 
   userId:number;
   total:number;
+  user:{
+    name:string;
+    address:string;
+    phone:string;
+    
+  }
   status:OrderStatus,
   items:OrderItem[],
   payment?:Payment,
