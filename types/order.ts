@@ -1,10 +1,10 @@
+import { ProductInterface } from "./product";
 
 
  export enum OrderStatus { 
   ORDERED   ="ORDERED"   ,     // Đã đặt hàng
-  AWAITING_SHIPMENT="AWAITING_SHIPMENT" ,// Chờ chuyển phát
-  IN_TRANSIT  ="IN_TRANSIT"   ,   // Đang trung chuyển
-  DELIVERED  ="DELIVERED"  ,      // Đã giao đơn hàng
+  ON_SHIP  ="ON_SHIP"  ,      // Đang giao 
+  COMPLETED = "COMPLETED" ,// Đã thành công 
   CANCELED ="CANCELED"     ,     // Đã hủy
 }
 
@@ -40,10 +40,16 @@ export interface OrderItemBase  {
   unitPrice:number;
   subtotal:number;
   productId:number;
+  product:ProductInterface;
+
   orderId:number;
 }
 export interface CreateOrderItem extends Omit<OrderItemBase,"createdAt"|"updatedAt">{};
-export interface UpdateOrderItem extends Omit<OrderInterface,"id">{};
+export interface UpdateOrderItem {
+  status:OrderStatus,
+  trackingCode?:string,
+  updateAt:Date;
+};
 
 interface OrderItem extends OrderItemBase{ 
    id:number;
@@ -54,6 +60,7 @@ interface OrderItem extends OrderItemBase{
 interface OrderBase { 
   userId:number;
   total:number;
+  trackingCode?:string;
   user:{
     name:string;
     address:string;
@@ -69,7 +76,6 @@ interface OrderBase {
 
 export interface OrderInterface extends OrderBase{
   id:number;
-
 }
 export interface CreateNewOrder extends Omit<OrderBase,"createdAt"|"updatedAt">{};
 
