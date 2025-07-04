@@ -285,6 +285,9 @@ export const OrderClient = () => {
                         </p>
                         <p>Địa chỉ: {order.user.address}</p>
                         <p>Số điện thoại: {order.user.phone}</p>
+                        <p className="font-medium text-gray-900">
+                          Note: {order.note}
+                        </p>
                       </div>
                     </div>
 

@@ -67,6 +67,7 @@ interface OrderBase {
     phone:string;
     
   }
+  note?:string;
   status:OrderStatus,
   items:OrderItem[],
   payment?:Payment,
