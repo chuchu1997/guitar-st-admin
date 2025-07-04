@@ -1,11 +1,15 @@
 /** @format */
 
+import { SeoType } from "./seo";
+
 export interface ArticleBaseInterface {
   title: string;
   slug: string;
   description: string;
   imageUrl?: string;
   storeId?: number;
+  seo?: SeoType;
+  shortDescription?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
