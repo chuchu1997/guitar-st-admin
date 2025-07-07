@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Edit, Trash2, Plus, FolderTree } from "lucide-react";
+import { Edit, Trash2, Plus, FolderTree, Eye, EyeOff } from "lucide-react";
 import axios from "axios";
 import CategoryAPI from "@/app/api/categories/categories.api";
 import { useParams } from "next/navigation";
@@ -120,6 +120,9 @@ export default function CategoriesManagement() {
     null
   );
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<number>>(
+    new Set()
+  );
 
   useEffect(() => {
     setIsMounted(true);
@@ -330,248 +333,362 @@ export default function CategoriesManagement() {
     setEditingCategoryId(null);
   };
 
-  // Auto-generate slug from name
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryId: number) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
 
-  // Render category tree
+  // Render category tree with improved mobile design
   const renderCategoryTree = (
     categories: CategoryWithChildren[],
     depth = 0
   ) => {
     return (
-      <ul className={`${depth > 0 ? "pl-6" : "pl-0"} list-none`}>
+      <div className={`${depth > 0 ? "ml-4 sm:ml-6" : ""} space-y-2`}>
         {categories.map((category) => (
-          <li key={category.id} className="mb-2">
-            <div className="flex items-center">
-              <div
-                className={`flex-1 p-2 ${
-                  depth > 0 ? "border-l-2 border-gray-200" : ""
-                }`}>
-                <div className="font-medium">
-                  Tên danh mục :{" "}
-                  <span className="uppercase">{`( ${category.name} )`}</span>
-                </div>
-                <div className="text-sm text-gray-500">
-                  Mô tả : {category.description}
-                </div>
-                <div className="text-sm text-gray-500">
-                  Slug : {category.slug}
-                </div>
-                {category.variant &&
-                  CategoryVariantLabels[category.variant] && (
-                    <div className="text-sm text-gray-500">
-                      Có biến thể : {CategoryVariantLabels[category.variant]}
+          <div key={category.id} className="group">
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 hover:scale-[1.01] overflow-hidden">
+              <div className="p-3 sm:p-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-1">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            depth === 0
+                              ? "bg-blue-500"
+                              : depth === 1
+                              ? "bg-green-500"
+                              : "bg-purple-500"
+                          }`}></div>
+                        <span className="text-xs sm:text-sm text-gray-500 font-medium">
+                          {depth === 0 ? "Danh mục chính" : `Cấp ${depth + 1}`}
+                        </span>
+                      </div>
+                      {category.children && category.children.length > 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleCategoryExpansion(category.id)}
+                          className="p-1 h-6 w-6 hover:bg-gray-100 rounded-full">
+                          {expandedCategories.has(category.id) ? (
+                            <EyeOff className="h-3 w-3" />
+                          ) : (
+                            <Eye className="h-3 w-3" />
+                          )}
+                        </Button>
+                      )}
                     </div>
-                  )}
-                {category.imageUrl && (
-                  <details className="text-sm text-blue-500 cursor-pointer">
-                    <summary className="text-blue-600 underline">
-                      Xem link hình ảnh
-                    </summary>
-                    <div className="mt-1">Hình ảnh: {category.imageUrl}</div>
-                  </details>
-                )}
-              </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditCategory(category)}>
-                  <Edit className="h-4 w-4 mr-1" /> Chỉnh sửa
-                </Button>
-                <Button
-                  variant="outline"
-                  disabled={category.children && category.children.length > 0}
-                  size="sm"
-                  onClick={() => {
-                    if (
-                      window.confirm("Bạn có chắc chắn muốn xóa danh mục này?")
-                    ) {
-                      onDeleteCategory(category.id);
-                    }
-                  }}>
-                  <Trash2 className="h-4 w-4 mr-1" /> Xóa
-                </Button>
+
+                    <h3 className="text-sm sm:text-base font-semibold text-gray-900 mb-2 uppercase tracking-wide">
+                      {category.name}
+                    </h3>
+
+                    <div className="space-y-1 text-xs sm:text-sm text-gray-600">
+                      <div className="flex flex-wrap gap-1">
+                        <span className="font-medium">Mô tả:</span>
+                        <span className="break-words">
+                          {category.description}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1">
+                        <span className="font-medium">Slug:</span>
+                        <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">
+                          {category.slug}
+                        </code>
+                      </div>
+
+                      {category.variant &&
+                        CategoryVariantLabels[category.variant] && (
+                          <div className="flex flex-wrap gap-1">
+                            <span className="font-medium">Biến thể:</span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {CategoryVariantLabels[category.variant]}
+                            </span>
+                          </div>
+                        )}
+
+                      {category.imageUrl && (
+                        <details className="cursor-pointer">
+                          <summary className="text-blue-600 hover:text-blue-800 underline font-medium">
+                            Xem hình ảnh
+                          </summary>
+                          <div className="mt-2 p-2 bg-gray-50 rounded border-l-4 border-blue-400">
+                            <p className="text-xs break-all">
+                              {category.imageUrl}
+                            </p>
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 sm:flex-col sm:w-auto w-full">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditCategory(category)}
+                      className="flex-1 sm:flex-none hover:bg-blue-50 hover:border-blue-300 transition-colors">
+                      <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="text-xs sm:text-sm">Sửa</span>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      disabled={
+                        category.children && category.children.length > 0
+                      }
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "Bạn có chắc chắn muốn xóa danh mục này?"
+                          )
+                        ) {
+                          onDeleteCategory(category.id);
+                        }
+                      }}
+                      className="flex-1 sm:flex-none hover:bg-red-50 hover:border-red-300 transition-colors disabled:opacity-50">
+                      <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      <span className="text-xs sm:text-sm">Xóa</span>
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
+
             {category.children &&
               category.children.length > 0 &&
-              renderCategoryTree(category.children, depth + 1)}
-          </li>
+              expandedCategories.has(category.id) && (
+                <div className="mt-2 animate-in slide-in-from-top-2 duration-200">
+                  {renderCategoryTree(category.children, depth + 1)}
+                </div>
+              )}
+          </div>
         ))}
-      </ul>
+      </div>
     );
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <Card className="w-full ">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Quản lý danh mục</CardTitle>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  resetForm();
-                  setIsDialogOpen(true);
-                }}>
-                <Plus className="h-4 w-4 mr-1" /> Thêm mới
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-h-[90vh]  overflow-y-scroll ">
-              <DialogHeader className="flex-shrink-0">
-                <DialogTitle>
-                  <div className="text-center text-xl italic font-semibold">
-                    {editingCategoryId
-                      ? "Chỉnh sửa danh mục"
-                      : "Tạo mới danh mục"}
-                  </div>
-                </DialogTitle>
-              </DialogHeader>
-
-              <div className="flex-1 overflow-y-auto px-1">
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-6">
-                    <InputSectionWithForm
-                      form={form}
-                      nameFormField="name"
-                      loading={false}
-                      title={"Tên danh mục"}
-                      placeholder={"Vui lòng nhập tên danh mục"}
-                    />
-
-                    <InputSectionWithForm
-                      form={form}
-                      nameFormField="slug"
-                      loading={false}
-                      title={"Vui lòng nhập slug"}
-                      placeholder={"Vui lòng nhập slug"}
-                    />
-
-                    <ImageUploadSection
-                      form={form}
-                      loading={false}
-                      nameFormField="imageUrl"
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="variant"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Biến thể</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Chọn biến thể nếu có !!" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.values(CategoryVariant).map((variant) => (
-                                <SelectItem key={variant} value={variant}>
-                                  {CategoryVariantLabels[variant]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="parentId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Danh mục cha</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Chọn danh mục cha" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value={"null"}>
-                                Không (Là Danh mục Cha)
-                              </SelectItem>
-                              {categories.map((cat) => (
-                                <SelectItem
-                                  key={cat.id}
-                                  value={cat.id.toString()}
-                                  disabled={editingCategoryId === cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <TextAreaSectionWithForm
-                      form={form}
-                      loading={false}
-                      nameFormField="description"
-                      title="Mô tả"
-                      placeholder="Vui lòng nhập mô tả danh mục"
-                    />
-
-                    <SEOForm form={form} loading={false} />
-
-                    <DialogFooter className="flex-shrink-0 pt-6 mt-6 border-t">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          resetForm();
-                          setIsDialogOpen(false);
-                        }}>
-                        Hủy
-                      </Button>
-                      <Button
-                        type="submit"
-                        disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting
-                          ? "Đang xử lý..."
-                          : editingCategoryId
-                          ? "Lưu thay đổi"
-                          : "Tạo mới"}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="container mx-auto p-3 sm:p-4 lg:p-6">
+        <Card className="w-full shadow-lg border-0 bg-white/80 backdrop-blur-sm m-0 p-0">
+          <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg py-2">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/20 rounded-lg">
+                  <FolderTree className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg sm:text-xl font-bold">
+                    Quản lý danh mục
+                  </CardTitle>
+                  <p className="text-sm text-white/80 mt-1">
+                    Tổng: {categories.length} danh mục
+                  </p>
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardHeader>
-        <CardContent>
-          {/* Category Tree View */}
-          <div className="mt-4">
-            <div className="flex items-center mb-4">
-              <FolderTree className="h-5 w-5 mr-2" />
-              <h2 className="text-base font-semibold">
-                Thông tin tất cả danh mục
-              </h2>
-            </div>
 
-            <div className="border border-gray-200 rounded-lg p-4">
-              {categoryTree.length > 0 ? (
-                renderCategoryTree(categoryTree)
-              ) : (
-                <p className="text-gray-500">
-                  Chưa có danh mục nào hãy thêm 1 danh mục !!
-                </p>
-              )}
+              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    onClick={() => {
+                      resetForm();
+                      setIsDialogOpen(true);
+                    }}
+                    className="bg-white text-blue-600 hover:bg-blue-50 hover:scale-105 transition-all duration-200 shadow-lg">
+                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="text-sm sm:text-base">Thêm mới</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full max-w-2xl">
+                  <DialogHeader className="flex-shrink-0 pb-4 border-b">
+                    <DialogTitle className="text-center text-lg sm:text-xl font-bold text-gray-800">
+                      {editingCategoryId
+                        ? "Chỉnh sửa danh mục"
+                        : "Tạo mới danh mục"}
+                    </DialogTitle>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto px-1 py-4">
+                    <Form {...form}>
+                      <form
+                        onSubmit={form.handleSubmit(onSubmit)}
+                        className="space-y-4 sm:space-y-6">
+                        <InputSectionWithForm
+                          form={form}
+                          nameFormField="name"
+                          loading={false}
+                          title="Tên danh mục"
+                          placeholder="Vui lòng nhập tên danh mục"
+                        />
+
+                        <InputSectionWithForm
+                          form={form}
+                          nameFormField="slug"
+                          loading={false}
+                          title="Slug"
+                          placeholder="Vui lòng nhập slug"
+                        />
+
+                        <ImageUploadSection
+                          form={form}
+                          loading={false}
+                          nameFormField="imageUrl"
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="variant"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm sm:text-base font-medium">
+                                Biến thể
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-10 sm:h-11">
+                                    <SelectValue placeholder="Chọn biến thể nếu có" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.values(CategoryVariant).map(
+                                    (variant) => (
+                                      <SelectItem key={variant} value={variant}>
+                                        {CategoryVariantLabels[variant]}
+                                      </SelectItem>
+                                    )
+                                  )}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="parentId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm sm:text-base font-medium">
+                                Danh mục cha
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="h-10 sm:h-11">
+                                    <SelectValue placeholder="Chọn danh mục cha" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="null">
+                                    Không (Là Danh mục Cha)
+                                  </SelectItem>
+                                  {categories.map((cat) => (
+                                    <SelectItem
+                                      key={cat.id}
+                                      value={cat.id.toString()}
+                                      disabled={editingCategoryId === cat.id}>
+                                      {cat.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <TextAreaSectionWithForm
+                          form={form}
+                          loading={false}
+                          nameFormField="description"
+                          title="Mô tả"
+                          placeholder="Vui lòng nhập mô tả danh mục"
+                        />
+
+                        <SEOForm form={form} loading={false} />
+
+                        <DialogFooter className="flex-shrink-0 pt-6 mt-6 border-t flex-col sm:flex-row gap-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              resetForm();
+                              setIsDialogOpen(false);
+                            }}
+                            className="w-full sm:w-auto order-2 sm:order-1">
+                            Hủy
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={form.formState.isSubmitting}
+                            className="w-full sm:w-auto order-1 sm:order-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                            {form.formState.isSubmitting
+                              ? "Đang xử lý..."
+                              : editingCategoryId
+                              ? "Lưu thay đổi"
+                              : "Tạo mới"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardHeader>
+
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                <div className="p-2 bg-blue-600 rounded-lg">
+                  <FolderTree className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-800">
+                    Danh sách danh mục
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Quản lý tất cả danh mục của cửa hàng
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {categoryTree.length > 0 ? (
+                  <div className="p-4">{renderCategoryTree(categoryTree)}</div>
+                ) : (
+                  <div className="p-8 text-center">
+                    <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <FolderTree className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <p className="text-gray-500 text-sm sm:text-base">
+                      Chưa có danh mục nào
+                    </p>
+                    <p className="text-gray-400 text-xs sm:text-sm mt-1">
+                      Hãy thêm danh mục đầu tiên của bạn
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

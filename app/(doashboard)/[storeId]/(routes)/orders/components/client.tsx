@@ -174,22 +174,22 @@ export const OrderClient = () => {
   }, [currentPage]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          <h1 className="text-lg md:text-3xl font-bold text-gray-900 mb-2">
             Quản lý đơn đặt hàng
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm md:text-base text-gray-600">
             Quản lý và kiểm tra tất cả các đơn đặt hàng
           </p>
         </div>
 
         <div className="mb-6">
-          <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-2  md:flex flex-wrap  gap-2">
             <button
               onClick={() => setSelectedFilter("all")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors flex items-center gap-2 ${
                 selectedFilter === "all"
                   ? "bg-gray-900 text-white"
                   : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
@@ -204,7 +204,7 @@ export const OrderClient = () => {
                 <button
                   key={status}
                   onClick={() => setSelectedFilter(status as OrderStatus)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors flex items-center gap-2 ${
                     selectedFilter === status
                       ? "bg-gray-900 text-white"
                       : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-300"
@@ -217,7 +217,7 @@ export const OrderClient = () => {
           </div>
         </div>
 
-        <div className="grid gap-6">
+        <div className="grid gap-2">
           {filteredOrders.length === 0 ? (
             <div className="text-center py-12">
               <Package size={48} className="mx-auto text-gray-400 mb-4" />

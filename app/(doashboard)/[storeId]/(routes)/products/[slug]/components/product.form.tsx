@@ -65,9 +65,11 @@ const formSchema = z.object({
   giftProducts: z.array(giftSchema).optional(),
   seo: seoSchemaZod.optional(),
 });
+
 interface ProductProps {
   initialData: (ProductInterface & {}) | null;
 }
+
 type ProductFormValues = z.infer<typeof formSchema>;
 
 export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
@@ -76,14 +78,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const router = useRouter();
 
   const action = initialData ? "Cập nhật sản phẩm" : "Tạo sản phẩm";
-  // const formData: ProductFormValues = {
-  //       ...initialData,
-  //       id: initialData.id ?? null,
-  //       // const currentProductID = initialData?.id ?? null;
-
-  //       originalPrice: initialData.originalPrice ?? 0,
-  //       categoryId: initialData.categoryId.toString(),
-  //     };
 
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(formSchema),
@@ -125,14 +119,15 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   const [loading, setLoading] = useState(false);
 
   type TempProductVariantColor = Omit<ProductColorInterface, "id"> & {
-    id?: number; // có thể có hoặc không
-    _temp?: boolean; // đánh dấu là màu tạm
+    id?: number;
+    _temp?: boolean;
   };
 
   type TempProductVariantSize = Omit<ProductSizeInterface, "id"> & {
-    id?: number; // có thể có hoặc không
-    _temp?: boolean; // đánh dấu là màu tạm
+    id?: number;
+    _temp?: boolean;
   };
+
   const handleAddColor = useCallback((newVariant: TempProductVariantColor) => {
     const variant: ProductColorInterface = {
       ...(newVariant as ProductColorInterface),
@@ -141,6 +136,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
 
     setSelectedColors((prev) => [...prev, variant]);
   }, []);
+
   const handleAddSize = useCallback((newVariant: TempProductVariantSize) => {
     const variant: ProductSizeInterface = {
       ...(newVariant as ProductSizeInterface),
@@ -159,6 +155,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
     },
     []
   );
+
   const handleUpdateSize = useCallback(
     (id: number, updates: Partial<ProductSizeInterface>) => {
       setSelectedSizes((prev) =>
@@ -169,21 +166,24 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
     },
     []
   );
+
   const handleRemoveColor = useCallback((id: number) => {
     setSelectedColors((prev) => prev.filter((c) => c.id !== id));
   }, []);
+
   const handleRemoveSize = useCallback((id: number) => {
     setSelectedSizes((prev) => prev.filter((c) => c.id !== id));
   }, []);
+
   const onSubmit = async (data: ProductFormValues) => {
     try {
       setLoading(true);
 
       // Upload ảnh lên S3
+      const oldImages = data.images.filter((img) => !img.file);
+      const newImages = data.images.filter((img) => img.file);
+      let finalImageUrls: ImageInterface[] = [...oldImages];
 
-      const oldImages = data.images.filter((img) => !img.file); // Ảnh cũ (chỉ có url)
-      const newImages = data.images.filter((img) => img.file); // Ảnh mới (có file cần upload)
-      let finalImageUrls: ImageInterface[] = [...oldImages]; // Bắt đầu từ ảnh cũ
       if (newImages.length > 0) {
         const formData = new FormData();
         newImages.forEach((img) => {
@@ -201,7 +201,6 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           file: undefined,
         }));
 
-        //Ghép ảnh mới vào danh sách cuối cùng
         finalImageUrls = [...oldImages, ...uploadedImageUrls];
       }
 
@@ -228,6 +227,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         }
         return { ...color };
       });
+
       const cleanedSizes = selectedSizes.map((size) => {
         const tempSize = size as ProductSizeInterface & { _temp?: boolean };
         if (tempSize._temp) {
@@ -252,8 +252,8 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         categoryId: Number(categoryId),
         storeId: Number(storeId),
         images: finalImageUrls,
-        colors: cleanedColors, // 👈 cleaned colors
-        sizes: cleanedSizes, // 👈 cleaned sizes
+        colors: cleanedColors,
+        sizes: cleanedSizes,
       };
 
       const res = initialData
@@ -276,13 +276,14 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
       }
     }
   };
+
   useEffect(() => {
-    // Ví dụ: kiểm tra lỗi cụ thể
     console.log("FORM ERROR", form.formState.errors);
   }, [form.formState.errors]);
+
   useEffect(() => {
     setIsMounted(true);
-    fetchCategoriesAndResetForm(); // chỉ gọi khi có dữ liệu
+    fetchCategoriesAndResetForm();
   }, [initialData]);
 
   const fetchCategoriesAndResetForm = async () => {
@@ -308,12 +309,10 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
         setTimeout(() => {
           toast.dismiss(toastId);
           window.location.href = `/${storeId}/categories`;
-
-          // router.push(`/${storeId}/categories`);
         }, 1500);
-        return; // thoát sớm nếu không có danh mục
+        return;
       }
-      // Reset form sau khi có danh sách danh mục
+
       if (initialData) {
         const formattedData: ProductFormValues = {
           ...initialData,
@@ -340,7 +339,7 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
           setSelectedSizes(initialData.sizes);
         }
 
-        form.reset(formattedData); // ✅ reset sau khi có data
+        form.reset(formattedData);
         if (initialData.colors.length > 0) {
           setSelectedColors(initialData.colors);
         }
@@ -357,114 +356,372 @@ export const ProductForm: React.FC<ProductProps> = ({ initialData }) => {
   };
 
   if (!mounted) {
-    return <>... Đang tải </>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p className="text-gray-600 font-medium">Đang tải...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {action} Sản Phẩm
-        </h1>
-        <p className="text-gray-600">
-          Điền thông tin chi tiết để tạo sản phẩm mới
-        </p>
-
-        {initialData && (
-          <div className="bg-gray-50 rounded-lg p-4 my-4">
-            <p className="text-sm text-gray-600">
-              Sản phẩm hiện tại: <strong>{initialData.name}</strong>
+    <div className="min-h-screen  bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* Header Section */}
+      <div className="bg-white shadow-lg border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full mb-4 transform hover:scale-110 transition-all duration-300 shadow-lg">
+              <svg
+                className="w-8 h-8 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                />
+              </svg>
+            </div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 tracking-tight">
+              {action}
+            </h1>
+            <p className="text-sm sm:text-base text-gray-600 max-w-2xl mx-auto">
+              Điền thông tin chi tiết để tạo sản phẩm mới với giao diện trực
+              quan và dễ sử dụng
             </p>
-            <p className="text-xs text-gray-500 mt-1">ID: {initialData.id}</p>
+
+            {initialData && (
+              <div className="mt-6 inline-block">
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-300 transform hover:scale-105">
+                  <div className="flex items-center justify-center space-x-3">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <div className="text-sm text-gray-700">
+                      <span className="font-medium">Sản phẩm hiện tại:</span>
+                      <span className="ml-2 font-bold text-blue-600">
+                        {initialData.name}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    ID: {initialData.id}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          <ImageUploadSection
-            form={form}
-            loading={loading}
-            isMultiple
-            note="Kích thước 1000x1000"
-          />
+      {/* Main Content */}
+      <div className="px-2 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            className="space-y-6 sm:space-y-8">
+            {/* Form Sections Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+              {/* Left Column - Main Information */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Image Upload Section */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Hình ảnh sản phẩm
+                    </h3>
+                  </div>
+                  <ImageUploadSection
+                    form={form}
+                    loading={loading}
+                    isMultiple
+                    note="Kích thước khuyến nghị: 1000x1000px"
+                  />
+                </div>
 
-          <BasicInfoSection
-            form={form}
-            loading={loading}
-            categories={categories}
-          />
+                {/* Basic Info Section */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Thông tin cơ bản
+                    </h3>
+                  </div>
+                  <BasicInfoSection
+                    form={form}
+                    loading={loading}
+                    categories={categories}
+                  />
+                </div>
 
-          <DescriptionSection form={form} loading={loading} />
-          <VariantSelector
-            loading={loading}
-            type="color"
-            title="Màu sắc"
-            icon={<Palette className="w-4 h-4" />}
-            selectedVariants={selectedColors}
-            onRemoveVariant={handleRemoveColor}
-            onAddVariant={(newColorObject) => {
-              let newColorInstance = newColorObject as ProductColorInterface;
-              handleAddColor({
-                hex: newColorInstance.hex, // default hoặc từ UI
-                name: newColorInstance.name,
-                stock: newColorInstance.stock,
-                price: newColorInstance.price,
-                _temp: true,
-              });
-            }}
-            onUpdateVariant={handleUpdateColor}
-          />
-          <VariantSelector
-            loading={loading}
-            type="size"
-            title="Kích thước sản phẩm (Tùy chọn)"
-            icon={<Ruler className="w-5 h-5 text-orange-600" />}
-            selectedVariants={selectedSizes}
-            onRemoveVariant={handleRemoveSize}
-            onAddVariant={(newSizeObject) => {
-              let newSizeInstance = newSizeObject as ProductSizeInterface;
-              handleAddSize({
-                name: newSizeInstance.name,
-                stock: newSizeInstance.stock,
-                price: newSizeInstance.price,
-                _temp: true,
-              });
-            }}
-            onUpdateVariant={handleUpdateSize}
-          />
-          <GiftProductSelector
-            form={form}
-            loading={loading}
-            initValue={initialData?.giftProducts ?? []}
-          />
+                {/* Description Section */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Mô tả sản phẩm
+                    </h3>
+                  </div>
+                  <DescriptionSection form={form} loading={loading} />
+                </div>
 
-          <SettingsSection form={form} loading={loading} />
+                {/* Variants Section */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                  {/* Color Variants */}
+                  <div className="bg-white rounded-2xl shadow-lg  p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                    <VariantSelector
+                      loading={loading}
+                      type="color"
+                      title="Màu sắc"
+                      icon={<Palette className="w-4 h-4" />}
+                      selectedVariants={selectedColors}
+                      onRemoveVariant={handleRemoveColor}
+                      onAddVariant={(newColorObject) => {
+                        let newColorInstance =
+                          newColorObject as ProductColorInterface;
+                        handleAddColor({
+                          hex: newColorInstance.hex,
+                          name: newColorInstance.name,
+                          stock: newColorInstance.stock,
+                          price: newColorInstance.price,
+                          _temp: true,
+                        });
+                      }}
+                      onUpdateVariant={handleUpdateColor}
+                    />
+                  </div>
 
-          <SEOForm form={form} loading={loading} />
+                  {/* Size Variants */}
+                  <div className="bg-white rounded-2xl shadow-lg  p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                    <VariantSelector
+                      loading={loading}
+                      type="size"
+                      title="Kích thước"
+                      icon={<Ruler className="w-4 h-4" />}
+                      selectedVariants={selectedSizes}
+                      onRemoveVariant={handleRemoveSize}
+                      onAddVariant={(newSizeObject) => {
+                        let newSizeInstance =
+                          newSizeObject as ProductSizeInterface;
+                        handleAddSize({
+                          name: newSizeInstance.name,
+                          stock: newSizeInstance.stock,
+                          price: newSizeInstance.price,
+                          _temp: true,
+                        });
+                      }}
+                      onUpdateVariant={handleUpdateSize}
+                    />
+                  </div>
+                </div>
+              </div>
 
-          <div className="flex items-center justify-center gap-4 pt-8 border-t border-gray-200">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="min-w-[150px] bg-gradient-to-r from-blue-600 to-purple-600 
-                        hover:from-blue-700 hover:to-purple-700 text-white font-medium
-                        shadow-lg hover:shadow-xl transition-all duration-200"
-              size="lg">
-              {loading ? "Đang xử lý..." : action}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={loading}
-              size="lg"
-              className="min-w-[100px] border-gray-300 hover:bg-gray-50">
-              Hủy bỏ
-            </Button>
-          </div>
-        </form>
-      </Form>
+              {/* Right Column - Additional Settings */}
+              <div className="lg:col-span-1 space-y-6">
+                {/* Gift Products */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-pink-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Quà tặng
+                    </h3>
+                  </div>
+                  <GiftProductSelector
+                    form={form}
+                    loading={loading}
+                    initValue={initialData?.giftProducts ?? []}
+                  />
+                </div>
+
+                {/* Settings */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Cài đặt
+                    </h3>
+                  </div>
+                  <SettingsSection form={form} loading={loading} />
+                </div>
+
+                {/* SEO Settings */}
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]">
+                  <div className="flex items-center mb-6">
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-teal-500 rounded-lg flex items-center justify-center mr-4">
+                      <svg
+                        className="w-5 h-5 text-white"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">SEO</h3>
+                  </div>
+                  <SEOForm form={form} loading={loading} />
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Section */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 sm:p-8 mt-8">
+              <div className="flex flex-row items-center justify-center gap-4">
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className={`
+                    w-full text-sm sm:w-auto min-w-[180px] h-12 
+                    bg-gradient-to-r from-blue-600 to-purple-600 
+                    hover:from-blue-700 hover:to-purple-700 
+                    text-white font-semibold sm:text-lg
+                    rounded-xl shadow-lg hover:shadow-xl 
+                    transition-all duration-300 transform 
+                    hover:scale-105 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed 
+                    disabled:transform-none disabled:hover:scale-100
+                    focus:ring-4 focus:ring-blue-300
+                  `}>
+                  {loading ? (
+                    <div className="flex items-center justify-center space-x-2">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Đang xử lý...</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center space-x-2">
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <span>{action}</span>
+                    </div>
+                  )}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => router.back()}
+                  disabled={loading}
+                  className={`
+                    w-full  text-sm sm:w-auto min-w-[120px] h-12 
+                    border-2 border-gray-300 hover:border-gray-400
+                    bg-white hover:bg-gray-50 
+                    text-gray-700 font-semibold sm:text-lg
+                    rounded-xl shadow-md hover:shadow-lg
+                    transition-all duration-300 transform 
+                    hover:scale-105 active:scale-95
+                    disabled:opacity-50 disabled:cursor-not-allowed
+                    disabled:transform-none disabled:hover:scale-100
+                    focus:ring-4 focus:ring-gray-300
+                  `}>
+                  <div className="flex items-center justify-center space-x-2">
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                    <span>Hủy bỏ</span>
+                  </div>
+                </Button>
+              </div>
+            </div>
+          </form>
+        </Form>
+      </div>
     </div>
   );
 };

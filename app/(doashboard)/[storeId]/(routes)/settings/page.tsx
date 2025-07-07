@@ -57,7 +57,7 @@ export default function SettingsPage() {
   if (!store) return null;
   return (
     <div className="flex flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
+      <div className="flex-1 space-y-4">
         <SettingsForm initialData={store}></SettingsForm>
         {/* <Heading title={"API"} description={"API Call for products"} />
         <Separator /> */}

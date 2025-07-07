@@ -250,7 +250,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
             title="Hình ảnh Banner"
           />
 
-          <div className="grid grid-cols-2 gap-8 mt-[15px]">
+          <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4 mt-[15px]">
             <InputSectionWithForm
               form={form}
               nameFormField="title"
@@ -302,7 +302,7 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
                 description="Cấu hình nút Call-to-Action cho Banner"
               />
               <Separator className="my-4" />
-              <div className="grid grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 gap-4">
                 <InputSectionWithForm
                   form={form}
                   nameFormField="cta.title"
@@ -322,10 +322,14 @@ export const BannerForm: React.FC<BannerProps> = ({ initialData }) => {
               </div>
             </div>
           </div>
-
-          <Button disabled={loading} className="ml-auto mt-4" type="submit">
-            {action}
-          </Button>
+          <div className=" flex justify-center items-center mt-4">
+            <Button
+              disabled={loading}
+              className="w-full h-[45px] md:h-[60px] md:w-[600px] text-sm md:text-base"
+              type="submit">
+              {action}
+            </Button>
+          </div>
         </form>
       </Form>
 

@@ -207,7 +207,7 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
   }, [initialData]);
   if (!isMounted) return <>Chưa có dữ liệu</>;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}
@@ -236,7 +236,7 @@ export const PromotionForm: React.FC<PromotionProps> = ({ initialData }) => {
       <Separator />
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className=" w-full">
-          <div className="grid grid-cols-2 gap-4 mt-[15px] ">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-[15px] ">
             <InputSectionWithForm
               form={form}
               nameFormField="name"

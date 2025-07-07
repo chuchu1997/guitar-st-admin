@@ -315,7 +315,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 p-6">
+    <div className="max-w-4xl mx-auto space-y-8 p-4">
       <AlertModal
         isOpen={open}
         onClose={() => setOpen(false)}
@@ -360,8 +360,8 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
       <StoreStats storeName={initialData?.name || "Chưa đặt tên"} />
 
       {/* Main Settings Form */}
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50/50">
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50/50 m-0 p-0">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg py-2">
           <CardTitle className="flex items-center gap-2 text-gray-800">
             <Store className="w-5 h-5 p-2" />
             Thông Tin Store
@@ -370,11 +370,11 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
             Cập nhật thông tin cơ bản của store của bạn
           </CardDescription>
         </CardHeader>
-
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              {/* Responsive Grid: 1 cột trên mobile, 2 cột từ md trở lên */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <InputSectionWithForm
                   form={form}
                   nameFormField="name"
@@ -383,15 +383,6 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   placeholder="Vui lòng nhập tên cửa hàng"
                   icon={Store}
                 />
-                <TextAreaSectionWithForm
-                  form={form}
-                  nameFormField="description"
-                  loading={loading}
-                  title="Mô tả Cửa Hàng"
-                  placeholder="Vui lòng nhập mô tả cho cửa hàng"
-                />
-
-                {/* ImageUploadSection */}
 
                 <InputSectionWithForm
                   form={form}
@@ -401,6 +392,7 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   placeholder="Vui lòng nhập email cửa hàng"
                   icon={Mail}
                 />
+
                 <InputSectionWithForm
                   form={form}
                   nameFormField="phone"
@@ -411,6 +403,17 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                   icon={PhoneCall}
                 />
 
+                {/* TextArea chiếm toàn bộ chiều ngang */}
+                <div className="col-span-1 md:col-span-2">
+                  <TextAreaSectionWithForm
+                    form={form}
+                    nameFormField="description"
+                    loading={loading}
+                    title="Mô tả Cửa Hàng"
+                    placeholder="Vui lòng nhập mô tả cho cửa hàng"
+                  />
+                </div>
+
                 <div className="col-span-1 md:col-span-2">
                   <SocialsSection
                     form={form}
@@ -419,13 +422,14 @@ export const SettingsForm: React.FC<SettingsProps> = ({ initialData }) => {
                     loading={loading}
                   />
                 </div>
-                <div className="col-span-2">
+
+                <div className="col-span-1 md:col-span-2">
                   <SEOForm loading={loading} form={form} />
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-100 justify-center">
+              <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-gray-100 justify-center mt-6">
                 <Button
                   type="submit"
                   disabled={loading}

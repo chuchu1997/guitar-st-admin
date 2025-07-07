@@ -142,7 +142,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
 
   return (
     <>
-      <Card className="w-full">
+      <Card className="w-full shadow-md ">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -171,7 +171,7 @@ export const VariantSelector: React.FC<VariantSelectorProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-6 ">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium text-muted-foreground">

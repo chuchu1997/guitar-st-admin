@@ -69,7 +69,7 @@ export default function DashboardLayout(props: LayoutProps) {
       <GlobalRouteLoader />
       <SidebarProvider>
         <AppSidebar />
-        <div className="wrapper-dashboard   w-full">
+        <div className="wrapper-dashboard  w-full">
           <Navbar />
           <div className="min-h-[600px] container mx-auto mt-[10px]">
             {children}

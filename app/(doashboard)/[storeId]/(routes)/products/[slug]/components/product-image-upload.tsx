@@ -29,7 +29,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
   title = "Hình ảnh sản phẩm",
   nameFormField = "images",
 }) => (
-  <Card className="shadow-sm">
+  <Card className="shadow-sm ">
     <CardHeader>
       <CardTitle className="flex items-center gap-3">
         <div className="p-2 bg-blue-50 rounded-lg">
@@ -38,7 +38,7 @@ export const ImageUploadSection: React.FC<ImageUploadSectionProps> = ({
         {title}
       </CardTitle>
 
-      <div className="italic text-gray-800 bg-gray-200 px-3 py-1 rounded-md text-sm max-w-fit mt-1 font-medium">
+      <div className="italic text-center text-gray-800 bg-gray-200 px-3 py-1 rounded-md text-sm max-w-fit mt-1 font-medium">
         {note && `(${note})`}
       </div>
     </CardHeader>

@@ -207,11 +207,11 @@ const ImageUpload: React.FC<ImageUploadPropsTyped> = ({
   };
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-2 ">
       {/* Upload Area */}
       <div
         className={`
-          relative border-2 border-dashed rounded-xl transition-all duration-300 cursor-pointer group
+          relative border-2 h-[100px] sm:h-auto   overflow-hidden border-dashed rounded-xl transition-all duration-300 cursor-pointer group
           ${isDragOver 
             ? "border-blue-400 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 scale-105" 
             : "border-slate-300 dark:border-slate-600 hover:border-blue-400 hover:bg-gradient-to-br hover:from-slate-50 hover:to-blue-50 dark:hover:from-slate-800/50 dark:hover:to-blue-950/20"
@@ -234,7 +234,7 @@ const ImageUpload: React.FC<ImageUploadPropsTyped> = ({
           disabled={disabled || isProcessing}
         />
 
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           {isProcessing ? (
             <div className="flex flex-col items-center">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center">
@@ -322,19 +322,7 @@ const ImageUpload: React.FC<ImageUploadPropsTyped> = ({
               )}
             </div>
             
-            {isMultiple && normalizedValue.length < maxFiles && (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={disabled || isProcessing}
-                className="hover:bg-blue-50 hover:border-blue-400 hover:text-blue-600 dark:hover:bg-blue-950/20 dark:hover:text-blue-400 transition-all duration-200"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Thêm ảnh
-              </Button>
-            )}
+        
           </div>
 
           <div className={`${
@@ -346,7 +334,7 @@ const ImageUpload: React.FC<ImageUploadPropsTyped> = ({
                 className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-102"
               >
                 {/* Image */}
-                <div className="aspect-square max-h-[500px] w-full relative">
+                <div className="aspect-square h-[80px] max-h-[500px] w-full relative">
                   <Image
                     src={item.url}
                     alt={`Preview ${index + 1}`}
