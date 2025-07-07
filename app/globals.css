@@ -65,6 +65,7 @@ input[type=number] {
 :root {
   --chart-highlight: 48 96% 53%;
 
+
   --radius: 0.625rem;
 
   --card: oklch(1 0 0);

@@ -18,6 +18,7 @@ import {
   LayersIcon,
   User2Icon,
   DiamondPercent,
+  Command,
 } from "lucide-react";
 
 import {
@@ -84,6 +85,12 @@ export function AppSidebar() {
         icon: PackageSearchIcon,
         active: pathname === `/${params.storeId}/products`,
       },
+      {
+        href: `/${params.storeId}/fake-comments`,
+        label: "Comment giả lập",
+        icon: Command,
+        active: pathname === `/${params.storeId}/fake-comments`,
+      },
       // {
       //   href: `/${params.storeId}/services`,
       //   label: "Dịch vụ",
@@ -149,7 +156,7 @@ export function AppSidebar() {
       {items.map((route) => {
         const Icon = route.icon;
         return (
-          <SidebarMenuItem key={route.href} className="relative group">
+          <SidebarMenuItem key={route.href} className="relative group  ">
             <SidebarMenuButton asChild>
               <a
                 href={route.href}
@@ -201,7 +208,7 @@ export function AppSidebar() {
     children: React.ReactNode;
     icon: React.ElementType;
   }) => (
-    <SidebarGroup className="mb-2">
+    <SidebarGroup className="mb-2 ">
       <SidebarGroupLabel
         onClick={onToggle}
         className={cn(
@@ -234,7 +241,7 @@ export function AppSidebar() {
   );
 
   return (
-    <Sidebar className="top-0 h-screen w-65 z-50 border-r-0">
+    <Sidebar className="top-0 h-screen w-65 z-50 border-r-0 ">
       <SidebarContent className="bg-gradient-to-b from-white via-slate-50/30 to-white border-r border-slate-200/60 shadow-xl">
         {/* Header Section */}
         <div className="p-6 border-b border-slate-200/60">

@@ -1,3 +1,4 @@
+import { FakeComment } from "./fake-comments";
 import { SeoType } from "./seo";
 
 
@@ -33,7 +34,7 @@ interface ProductBase {
     sku:string;
     storeId:number;
       seo?:SeoType
-
+    fakeCommens:FakeComment[]
         //sản phẩm này có tặng quà nào không?
     giftProducts?:any[];
     //sản phẩm này có phải quà tặng của sản phẩm nào không?
